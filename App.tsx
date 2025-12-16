@@ -5,6 +5,7 @@ import { Questionnaire } from './components/Questionnaire';
 import { Dashboard } from './components/Dashboard';
 import { UserProfile } from './types';
 import { NotificationManager } from './components/NotificationManager';
+import { GamificationService } from './services/gamificationService';
 import { Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -23,14 +24,14 @@ const App: React.FC = () => {
       // Limpeza nuclear para garantir que tokens corrompidos não persistam
       // Hardcoded para o projeto atual para evitar erros com import.meta.env
       localStorage.removeItem('sb-evgnmqmocqtwvhvmnsvq-auth-token');
-      
+
       // Fallback: limpa tudo se não souber a chave exata
       if (localStorage.length > 0) {
-          Object.keys(localStorage).forEach(key => {
-              if (key.startsWith('sb-')) localStorage.removeItem(key);
-          });
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-')) localStorage.removeItem(key);
+        });
       }
-      
+
       setSession(null);
       setUserProfile(null);
       setLoading(false);
@@ -45,7 +46,7 @@ const App: React.FC = () => {
         handleForceLogout();
         return;
       }
-      
+
       setSession(session);
       if (session) fetchProfile(session.user.id);
       else setLoading(false);
@@ -55,7 +56,7 @@ const App: React.FC = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      
+
       if (event === 'SIGNED_OUT') {
         setSession(null);
         setUserProfile(null);
@@ -64,11 +65,11 @@ const App: React.FC = () => {
       }
 
       setSession(session);
-      
+
       if (session) {
         // Apenas busca o perfil se ainda não tivermos ou se o usuário mudou
         if (!userProfile || userProfile.email !== session.user.email) {
-             fetchProfile(session.user.id);
+          fetchProfile(session.user.id);
         }
       } else {
         setUserProfile(null);
@@ -89,7 +90,7 @@ const App: React.FC = () => {
 
       if (error) {
         if (error.code !== 'PGRST116') { // PGRST116 é "Row not found"
-             console.error('Error fetching profile:', error);
+          console.error('Error fetching profile:', error);
         }
         // Se não achar perfil, não é erro fatal, apenas o usuário precisa preencher o questionário
       }
@@ -106,36 +107,50 @@ const App: React.FC = () => {
 
   const handleOnboardingComplete = async (profile: UserProfile) => {
     if (!session) return;
-    
+
     setLoading(true);
     try {
-      // 1. Save Profile to Supabase
-      const { error } = await supabase
+      // 1. Normalizar telefone
+      let cleanNumber = profile.phone?.replace(/\D/g, '') || '';
+      if (cleanNumber.length >= 10 && cleanNumber.length <= 11) {
+        cleanNumber = '55' + cleanNumber;
+      }
+
+      // 2. Salvar perfil COMPLETO no Supabase
+      const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: session.user.id,
           email: session.user.email,
           name: profile.name,
-          medical_data: profile
+          medical_data: {
+            ...profile,
+            phone: cleanNumber
+          }
         });
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
-      // 2. Trigger N8N Webhook (Welcome Message)
-      const cleanNumber = profile.phone.replace(/\D/g, '');
+      // 3. Inicializar gamificação (recebe +50 XP de boas-vindas)
+      await GamificationService.initializeGamification(session.user.id);
+
+      // 4. Marcar tarefa básica como completa
+      await GamificationService.completeProfileTask(session.user.id, 'basic_info');
+
+      // 5. Trigger N8N Webhook (Welcome Message)
       const webhookUrl = 'https://toothlessgreenlandshark-n8n.cloudfy.live/webhook/novo-cadastro';
-      
+
       fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-              number: cleanNumber,
-              name: profile.name,
-              source: 'onboarding'
-          })
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          number: cleanNumber,
+          name: profile.name,
+          source: 'full_onboarding'
+        })
       }).catch(err => console.warn('Failed to trigger onboarding webhook:', err));
 
-      // 3. Update State
+      // 6. Atualizar estado
       setUserProfile(profile);
     } catch (error: any) {
       alert('Erro ao salvar perfil: ' + error.message);
@@ -162,8 +177,8 @@ const App: React.FC = () => {
         <Questionnaire onComplete={handleOnboardingComplete} />
       ) : (
         <>
-           <NotificationManager user={userProfile} />
-           <Dashboard user={userProfile} session={session} />
+          <NotificationManager user={userProfile} />
+          <Dashboard user={userProfile} session={session} />
         </>
       )}
     </div>

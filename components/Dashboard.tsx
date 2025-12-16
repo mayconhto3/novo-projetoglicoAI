@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { UserProfile, GlucoseReading, Reminder, Meal, InsulinRecord } from '../types';
+import { UserProfile, GlucoseReading, Reminder, Meal, InsulinRecord, ProfileTaskKey } from '../types';
 import GlucoseChart from './GlucoseChart';
 import { generateHealthInsight } from '../services/geminiService';
 import { ChatAssistant } from './ChatAssistant';
@@ -13,6 +13,11 @@ import { GlucoseHistory } from './GlucoseHistory';
 import { GlucoseEntryModal } from './GlucoseEntryModal';
 import { Gamification } from './Gamification';
 import { Settings } from './Settings';
+import { XPBar } from './XPBar';
+import { ProfileCompletionCard } from './ProfileCompletionCard';
+import { PROFILE_TASK_METADATA, calculateCompletionPercentage, isTaskComplete } from '../services/profileTasksConfig';
+import { XPNotification, LevelUpNotification, BadgeUnlockedNotification } from './GamificationNotifications';
+import { useGamification } from '../hooks/useGamification';
 import {
     Activity,
     Bot,
@@ -57,8 +62,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
     const [activeReminders, setActiveReminders] = useState<Reminder[]>([]);
 
     const [activeScreen, setActiveScreen] = useState<'dashboard' | 'meals' | 'insulin' | 'glucose' | 'gamification' | 'settings'>('dashboard');
+    const [profileTaskModalOpen, setProfileTaskModalOpen] = useState(false);
+    const [selectedTaskKey, setSelectedTaskKey] = useState<ProfileTaskKey | null>(null);
 
     const notifiedMap = useRef<Map<string, number>>(new Map());
+
+    // Gamification hook
+    const {
+        notification,
+        closeNotification,
+        onGlucoseEntry,
+        onMealEntry,
+        onInsulinEntry,
+        loadGamification
+    } = useGamification(session.user.id);
+
+    // Carregar gamificação ao montar
+    useEffect(() => {
+        loadGamification();
+    }, [loadGamification]);
 
     const fetchActiveInsulin = async () => {
         try {
@@ -384,6 +406,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
 
                 <main className="max-w-lg mx-auto px-6 py-6 space-y-6">
 
+                    {/* XP Bar */}
+                    <XPBar userId={session.user.id} />
+
+                    {/* Profile Completion Card */}
+                    {(() => {
+                        const completionPercentage = calculateCompletionPercentage(user);
+                        const tasks = Object.keys(PROFILE_TASK_METADATA).map(key => ({
+                            key: key as ProfileTaskKey,
+                            completed: isTaskComplete(key as ProfileTaskKey, user),
+                            metadata: PROFILE_TASK_METADATA[key as ProfileTaskKey]
+                        })).sort((a, b) => a.metadata.priority - b.metadata.priority);
+
+                        // Só mostrar se não estiver 100% completo
+                        if (completionPercentage < 100) {
+                            return (
+                                <ProfileCompletionCard
+                                    completionPercentage={completionPercentage}
+                                    tasks={tasks}
+                                    onTaskClick={(taskKey) => {
+                                        // TODO: Abrir modal de edição de perfil
+                                        alert(`Editar: ${PROFILE_TASK_METADATA[taskKey].title}\n\nEm breve você poderá completar esta seção!`);
+                                    }}
+                                />
+                            );
+                        }
+                        return null;
+                    })()}
+
                     {/* Glucose Card */}
                     <div
                         onClick={() => setActiveScreen('glucose')}
@@ -418,9 +468,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                             {/* Dynamic colored bar based on glucose value */}
                             <div
                                 className={`absolute top-0 left-0 h-full rounded-full transition-all duration-500 ${currentGlucose < 70 ? 'bg-gradient-to-r from-red-500 to-red-400' :
-                                        currentGlucose > 250 ? 'bg-gradient-to-r from-orange-400 to-red-500' :
-                                            currentGlucose > 180 ? 'bg-gradient-to-r from-emerald-400 to-orange-400' :
-                                                'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                                    currentGlucose > 250 ? 'bg-gradient-to-r from-orange-400 to-red-500' :
+                                        currentGlucose > 180 ? 'bg-gradient-to-r from-emerald-400 to-orange-400' :
+                                            'bg-gradient-to-r from-emerald-500 to-emerald-400'
                                     }`}
                                 style={{ width: `${Math.min((currentGlucose / 350) * 100, 100)}%` }}
                             ></div>
@@ -431,9 +481,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                                 style={{ left: `${Math.min((currentGlucose / 350) * 100, 100)}%` }}
                             >
                                 <div className={`w-4 h-4 rounded-full -ml-2 border-2 border-white shadow-lg ${currentGlucose < 70 ? 'bg-red-500 animate-pulse' :
-                                        currentGlucose > 250 ? 'bg-red-500 animate-pulse' :
-                                            currentGlucose > 180 ? 'bg-orange-500' :
-                                                'bg-emerald-500'
+                                    currentGlucose > 250 ? 'bg-red-500 animate-pulse' :
+                                        currentGlucose > 180 ? 'bg-orange-500' :
+                                            'bg-emerald-500'
                                     }`}></div>
                             </div>
                         </div>
@@ -644,10 +694,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                 </div>
             </div>
 
-            <ChatAssistant user={user} readings={readings} isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} onDataUpdate={fetchChartData} />
+            <ChatAssistant
+                user={user}
+                readings={readings}
+                isOpen={isChatOpen}
+                onClose={() => setIsChatOpen(false)}
+                onDataUpdate={fetchChartData}
+                onMealEntry={onMealEntry}
+                onInsulinEntry={onInsulinEntry}
+            />
             <MedicalReportModal user={user} readings={readings} isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
             <ReminderManager isOpen={isRemindersOpen} onClose={() => { setIsRemindersOpen(false); fetchReminders(); }} />
-            <GlucoseEntryModal isOpen={isGlucoseEntryOpen} onClose={() => setIsGlucoseEntryOpen(false)} onSuccess={() => { fetchChartData(); }} />
+            <GlucoseEntryModal
+                isOpen={isGlucoseEntryOpen}
+                onClose={() => setIsGlucoseEntryOpen(false)}
+                onSuccess={async () => {
+                    await fetchChartData();
+                    await onGlucoseEntry(); // Award XP
+                }}
+            />
+
+            {/* Gamification Notifications */}
+            {notification?.type === 'xp' && notification.data.amount && notification.data.reason && (
+                <XPNotification
+                    amount={notification.data.amount}
+                    reason={notification.data.reason}
+                    onClose={closeNotification}
+                />
+            )}
+            {notification?.type === 'levelup' && notification.data.newLevel && (
+                <LevelUpNotification
+                    newLevel={notification.data.newLevel}
+                    onClose={closeNotification}
+                />
+            )}
+            {notification?.type === 'badge' && notification.data.badge && (
+                <BadgeUnlockedNotification
+                    badgeName={notification.data.badge.name}
+                    badgeIcon={notification.data.badge.icon}
+                    badgeDescription={notification.data.badge.description}
+                    onClose={closeNotification}
+                />
+            )}
         </div>
     );
 };

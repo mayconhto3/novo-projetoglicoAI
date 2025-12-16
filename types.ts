@@ -108,12 +108,12 @@ export interface UserProfile {
   icRatioLunch?: number;
   icRatioDinner?: number;
   icRatioSnack?: number;
-  
+
   knowsISF: boolean;
   isfMorning?: number; // 1u lowers X mg/dL
   isfAfternoon?: number;
   isfEvening?: number;
-  
+
   totalDailyDose?: number; // Helper for auto-calc
 
   targetGlucosePreMeal: number;
@@ -125,7 +125,7 @@ export interface UserProfile {
   usesCGM: boolean;
   cgmModel?: string;
   cgmIntegration?: boolean;
-  
+
   // SEÇÃO 5.3: HISTÓRICO DE EPISÓDIOS
   hypoglycemiaFrequency?: string;
   hypoglycemiaSymptoms?: string[];
@@ -151,7 +151,7 @@ export interface UserProfile {
   exerciseType?: string[];
   exerciseTime?: string;
   exerciseDuration?: number; // minutes
-  
+
   smoker: string;
   alcoholConsumption: string;
   stressLevel: string;
@@ -175,7 +175,7 @@ export interface UserProfile {
   notificationSettings?: NotificationSettings; // NOVA PROPRIEDADE
   checkInFrequency: string;
   communicationStyle: 'Direto' | 'Amigável' | 'Educativo' | 'Misto';
-  
+
   caregiver?: {
     active: boolean;
     name: string;
@@ -211,4 +211,79 @@ export interface ChatMessage {
   image?: string; // base64 string
   audio?: string; // base64 string for audio
   timestamp: Date;
+}
+
+// ============================================================================
+// GAMIFICATION TYPES
+// ============================================================================
+
+// Mapeia para a tabela user_gamification (dados agregados - 1 linha por usuário)
+export interface UserGamification {
+  id: string;
+  user_id: string;
+  level: number;
+  xp: number;              // XP atual no nível corrente
+  total_xp: number;        // XP total acumulado
+  streak_days: number;
+  longest_streak: number;
+  last_activity_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Mapeia para a tabela user_achievements existente (badges individuais)
+export interface UserAchievement {
+  id: string;
+  user_id: string;
+  badge_id: string;
+  badge_name: string;
+  xp_earned: number;       // XP ganho ao desbloquear
+  unlocked_at: string;
+  created_at: string;
+}
+
+// Definição de badge
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  criteria: BadgeCriteria;
+}
+
+export interface BadgeCriteria {
+  type: 'streak' | 'count' | 'tir' | 'level' | 'profile';
+  target: number;
+  current?: number;
+}
+
+// Tarefas de completamento de perfil
+export interface ProfileCompletionTask {
+  id: string;
+  user_id: string;
+  task_key: ProfileTaskKey;
+  completed: boolean;
+  completed_at: string | null;
+  xp_awarded: number;
+  created_at: string;
+}
+
+export type ProfileTaskKey =
+  | 'basic_info'           // Nome, tipo diabetes (FEITO no quick questionnaire)
+  | 'insulin_details'      // Marcas, doses, horários
+  | 'meal_schedule'        // Horários das refeições
+  | 'lifestyle_habits'     // Exercícios, sono, stress
+  | 'medical_team'         // Endócrino, nutricionista
+  | 'emergency_contact'    // Cuidador/familiar
+  | 'monitoring_setup'     // CGM, frequência de medição
+  | 'diet_preferences';    // Tipo de dieta, contagem de carbos
+
+export interface ProfileTaskMetadata {
+  key: ProfileTaskKey;
+  title: string;
+  description: string;
+  xp_reward: number;
+  icon: string;
+  priority: number; // Ordem de exibição
+  fields: string[]; // Campos do UserProfile relacionados
 }
