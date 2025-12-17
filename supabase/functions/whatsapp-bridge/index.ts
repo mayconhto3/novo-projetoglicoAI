@@ -150,6 +150,18 @@ function determineConfidence(message: string, matchedPattern: RegExp): 'high' | 
   return 'low';
 }
 
+// HELPER: Inferir horário da refeição baseado no timestamp
+function inferMealTime(timestamp: Date): string {
+  const hour = timestamp.getHours();
+
+  if (hour >= 6 && hour < 10) return 'Café';
+  if (hour >= 10 && hour < 12) return 'Lanche da Manhã';
+  if (hour >= 12 && hour < 15) return 'Almoço';
+  if (hour >= 15 && hour < 18) return 'Lanche da Tarde';
+  if (hour >= 18 && hour < 21) return 'Jantar';
+  return 'Ceia';
+}
+
 // PROMPT DO SISTEMA OTIMIZADO
 const generateSystemPrompt = (
   profile: UserProfile,
@@ -193,9 +205,23 @@ ${readings.length > 0 ? readings.slice(-5).map(r => `- ${new Date(r.timestamp).t
 3. SEGURANÇA: Sempre avise que a contagem por foto é uma estimativa.
 4. CONCISÃO: Seja direto e objetivo nas explicações. Evite textos excessivamente longos que possam cortar.
 5. DETECÇÃO DE GLICEMIA: Se o usuário mencionar uma medição de glicemia (ex: "medi minha glicemia deu 180", "glicemia tá em 95"), extraia o valor e o contexto.
-6. SAÍDA JSON: 
-   - Para REFEIÇÕES: END_JSON: {"carbs": <g>, "insulin": <u>, "calories": <kcal>}
-   - Para GLICEMIA: GLUCOSE_DATA: {"value": <mg/dL>, "type": "Fasting|Pre-Meal|Post-Meal|Correction", "confidence": "high|medium|low"}
+6. SAÍDA JSON (OBRIGATÓRIO):
+   - Para REFEIÇÕES com foto: SEMPRE termine sua resposta com:
+     END_JSON: {"carbs": <número>, "insulin": <número>, "calories": <número>}
+   
+   - Para GLICEMIA detectada: SEMPRE termine com:
+     GLUCOSE_DATA: {"value": <número>, "type": "Fasting|Pre-Meal|Post-Meal|Correction", "confidence": "high|medium|low"}
+   
+   IMPORTANTE: 
+   - NÃO inclua JSON no meio do texto
+   - SEMPRE use os marcadores END_JSON: ou GLUCOSE_DATA:
+   - Coloque o JSON na ÚLTIMA linha da resposta
+   
+   EXEMPLO CORRETO:
+   "Identifiquei arroz, feijão e frango. Total estimado: 45g de carboidratos. 
+   Sugiro 3u de insulina (45g ÷ 15 = 3u).
+   
+   END_JSON: {\"carbs\": 45, \"insulin\": 3, \"calories\": 350}"
 `;
 };
 
@@ -440,6 +466,53 @@ serve(async (req) => {
       replyText = replyText + confirmMsg;
     }
 
+    // === SANITIZAÇÃO: Remover qualquer JSON residual ===
+    // Remove JSON solto que não tenha marcador
+    replyText = replyText.replace(/\{[^}]*"carbs"[^}]*\}/g, '').trim();
+    replyText = replyText.replace(/\{[^}]*"value"[^}]*\}/g, '').trim();
+    replyText = replyText.replace(/\{[^}]*"insulin"[^}]*\}/g, '').trim();
+
+    // Remove linhas vazias múltiplas
+    replyText = replyText.replace(/\n{3,}/g, '\n\n').trim();
+
+    // === CONSTRUIR ACTION_DATA ESTRUTURADO ===
+    const actionEvents: any[] = [];
+
+    // Evento de refeição
+    if (parsedData.carbs) {
+      actionEvents.push({
+        type: 'meal',
+        carbs: parsedData.carbs,
+        carbs_range: parsedData.carbs_range || null,
+        calories: parsedData.calories || null,
+        insulin_suggested: parsedData.insulin || 0,
+        description: message || 'Refeição via foto',
+        confidence: 'medium' // IA sempre é estimativa
+      });
+    }
+
+    // Evento de glicemia
+    if (extractedGlucose && (extractedGlucose.confidence === 'high' || extractedGlucose.confidence === 'medium')) {
+      actionEvents.push({
+        type: 'glucose_reading',
+        value: extractedGlucose.value,
+        glucose_type: extractedGlucose.type,
+        confidence: extractedGlucose.confidence
+      });
+    }
+
+    // Evento de insulina (se IA sugeriu)
+    if (parsedData.insulin && parsedData.insulin > 0) {
+      actionEvents.push({
+        type: 'insulin',
+        units: parsedData.insulin,
+        insulin_type: 'Sugerido',
+        is_suggestion: true
+      });
+    }
+
+    const actionData = actionEvents.length > 0 ? { events: actionEvents } : null;
+
     // 6. Salvamento
     const savePromises: Promise<any>[] = [
       supabase.from("chat_history").insert([
@@ -453,11 +526,14 @@ serve(async (req) => {
       savePromises.push(
         supabase.from("meal_history").insert({
           user_id: userId,
-          description: message || "Refeição via WhatsApp",
-          estimated_carbs: parsedData.carbs,
-          estimated_calories: parsedData.calories,
-          insulin_suggested: parsedData.insulin,
-          assistant_comment: replyText,
+          created_at: new Date().toISOString(),
+          meal_time: inferMealTime(new Date()),
+          description: message || "Refeição via foto",
+          carbs: parsedData.carbs,
+          calories: parsedData.calories || null,
+          insulin_suggested: parsedData.insulin || 0,
+          insulin_taken: null,
+          ai_feedback: replyText,
           favorite: false
         })
       );
@@ -481,6 +557,7 @@ serve(async (req) => {
       number: cleanInputPhone,
       reply_type: "text",
       reply_content: replyText,
+      action_data: actionData
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error: any) {
