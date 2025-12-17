@@ -72,12 +72,23 @@ function extractGlucoseFromText(message: string, timestamp: Date): ExtractedGluc
   if (!message) return null;
 
   const glucosePatterns = [
-    /(?:glicemia|glico)\s+(?:está|deu|tá|é|foi|de)\s+(\d{2,3})/i,
-    /medi\s+(?:agora\s+)?(?:e\s+)?(?:deu\s+)?(\d{2,3})/i,
-    /(\d{2,3})\s*mg\/d[lL]/i,
-    /agora\s+(?:está|tá|é)\s+(\d{2,3})/i,
-    /(?:tá|está)\s+em\s+(\d{2,3})/i,
-    /mediu?\s+(\d{2,3})/i
+    // Padrão 1: Contexto completo "minha glicemia atual é 201"
+    /(?:minha?|meu|a)\s*(?:glicemia|glicose|glucose|gli|açúcar)\s*(?:atual|agora|hoje|da\s*vez)?\s*(?:está?|tá|é|foi|deu|marcou|mediu?)\s*(?:em|de|a)?\s*(\d{2,3})/i,
+
+    // Padrão 2: Verbo + número "medí 180", "testei 150"
+    /(?:medí|medi|testei|chequei|verifiquei|conferi)\s*(?:e|a)?\s*(?:glicemia|glicose|glucose|gli)?\s*(?:está?|tá|é|foi|deu|marcou)?\s*(\d{2,3})/i,
+
+    // Padrão 3: Palavra-chave + estado + número "glicose tá 150"
+    /(?:glicemia|glicose|glucose|gli|açúcar)\s*(?:está?|tá|é|foi|deu|marcou)\s*(?:em|de|a)?\s*(\d{2,3})/i,
+
+    // Padrão 4: Número + palavra-chave "201 de glicemia"
+    /(\d{2,3})\s*(?:de|mg\/dl|mg)?\s*(?:glicemia|glicose|glucose|gli|açúcar)/i,
+
+    // Padrão 5: Estado + número "está 180", "deu 95"
+    /(?:está?|tá|é|foi|deu|marcou)\s*(\d{2,3})\s*(?:mg\/dl|mg)?$/i,
+
+    // Padrão 6: Apenas número (mensagem curta)
+    /^(\d{2,3})$/
   ];
 
   for (const pattern of glucosePatterns) {
@@ -85,8 +96,8 @@ function extractGlucoseFromText(message: string, timestamp: Date): ExtractedGluc
     if (match && match[1]) {
       const value = parseInt(match[1]);
 
-      // Validate range (40-600 mg/dL)
-      if (value < 40 || value > 600) continue;
+      // Validate range (20-600 mg/dL) - expandido para capturar hipoglicemias severas
+      if (value < 20 || value > 600) continue;
 
       const type = inferGlucoseContext(timestamp, message);
       const confidence = determineConfidence(message, pattern);
