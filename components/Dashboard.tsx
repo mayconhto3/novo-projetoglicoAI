@@ -13,7 +13,7 @@ import { GlucoseHistory } from './GlucoseHistory';
 import { GlucoseEntryModal } from './GlucoseEntryModal';
 import { Gamification } from './Gamification';
 import { Settings } from './Settings';
-import { XPBar } from './XPBar';
+import { NavbarXP } from './NavbarXP';
 import { ProfileCompletionCard } from './ProfileCompletionCard';
 import { PROFILE_TASK_METADATA, calculateCompletionPercentage, isTaskComplete } from '../services/profileTasksConfig';
 import { XPNotification, LevelUpNotification, BadgeUnlockedNotification } from './GamificationNotifications';
@@ -383,6 +383,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                 <header className="bg-white/80 backdrop-blur-md sticky top-0 z-20 border-b border-gray-100/50">
                     <div className="max-w-lg mx-auto px-6 py-3 flex justify-between items-center">
                         <div className="flex items-center gap-3">
+                            {/* NavbarXP - Nível e XP */}
+                            <NavbarXP userId={session.user.id} />
+
                             <div className="w-10 h-10 object-contain">
                                 <img src="https://i.ibb.co/sBWYLd6/Kit-M-dico-Verde-Claro-M-dico-Logotipo-1000-x-1000-px-6.png" alt="Logo Icon" className="w-full h-full" />
                             </div>
@@ -406,35 +409,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
 
                 <main className="max-w-lg mx-auto px-6 py-6 space-y-6">
 
-                    {/* XP Bar */}
-                    <XPBar userId={session.user.id} />
-
-                    {/* Profile Completion Card */}
-                    {(() => {
-                        const completionPercentage = calculateCompletionPercentage(user);
-                        const tasks = Object.keys(PROFILE_TASK_METADATA).map(key => ({
-                            key: key as ProfileTaskKey,
-                            completed: isTaskComplete(key as ProfileTaskKey, user),
-                            metadata: PROFILE_TASK_METADATA[key as ProfileTaskKey]
-                        })).sort((a, b) => a.metadata.priority - b.metadata.priority);
-
-                        // Só mostrar se não estiver 100% completo
-                        if (completionPercentage < 100) {
-                            return (
-                                <ProfileCompletionCard
-                                    completionPercentage={completionPercentage}
-                                    tasks={tasks}
-                                    onTaskClick={(taskKey) => {
-                                        // TODO: Abrir modal de edição de perfil
-                                        alert(`Editar: ${PROFILE_TASK_METADATA[taskKey].title}\n\nEm breve você poderá completar esta seção!`);
-                                    }}
-                                />
-                            );
-                        }
-                        return null;
-                    })()}
-
-                    {/* Glucose Card */}
+                    {/* 1. Glucose Card - PRIMEIRO */}
                     <div
                         onClick={() => setActiveScreen('glucose')}
                         className="bg-[#029491] rounded-3xl p-6 shadow-lg shadow-[#0d4a4b]/10 border border-white/10 relative overflow-hidden group cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
@@ -494,7 +469,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                         </div>
                     </div>
 
-                    {/* AI Insight Manual Button */}
+                    {/* 2. AI Insight Manual Button - SEGUNDO (Dicas do GlicoAI) */}
                     <button
                         onClick={() => setIsChatOpen(true)}
                         className="w-full bg-[#b3ffd2] text-[#0d4a4b] rounded-2xl p-1 shadow-lg shadow-[#0d4a4b]/5 group active:scale-[0.99] transition-all overflow-hidden relative"
@@ -518,7 +493,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                         </div>
                     </button>
 
-                    {/* Chart */}
+                    {/* 3. Chart - TERCEIRO (Gráfico) */}
                     <div className="bg-white rounded-[2.5rem] p-4 shadow-sm border border-gray-100/80">
                         <GlucoseChart
                             data={readings.filter(r => new Date(r.timestamp).getTime() > Date.now() - 24 * 60 * 60 * 1000)}
@@ -528,6 +503,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                             insulin={recentInsulin}
                         />
                     </div>
+
+                    {/* 4. Profile Completion Card - QUARTO (Complete seu Perfil - abaixo do gráfico) */}
+                    {(() => {
+                        const completionPercentage = calculateCompletionPercentage(user);
+                        const tasks = Object.keys(PROFILE_TASK_METADATA).map(key => ({
+                            key: key as ProfileTaskKey,
+                            completed: isTaskComplete(key as ProfileTaskKey, user),
+                            metadata: PROFILE_TASK_METADATA[key as ProfileTaskKey]
+                        })).sort((a, b) => a.metadata.priority - b.metadata.priority);
+
+                        // Só mostrar se não estiver 100% completo
+                        if (completionPercentage < 100) {
+                            return (
+                                <ProfileCompletionCard
+                                    completionPercentage={completionPercentage}
+                                    tasks={tasks}
+                                    onTaskClick={(taskKey) => {
+                                        // TODO: Abrir modal de edição de perfil
+                                        alert(`Editar: ${PROFILE_TASK_METADATA[taskKey].title}\n\nEm breve você poderá completar esta seção!`);
+                                    }}
+                                />
+                            );
+                        }
+                        return null;
+                    })()}
 
                     {/* Risk Clock */}
                     {riskPatterns && riskPatterns.worst.risk > 15 && (
@@ -595,7 +595,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                         </div>
                     )}
 
-                    {/* Stats Grid */}
+                    {/* 5. Stats Grid - QUINTO (Tempo no Alvo + Insulina Ativa) */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-white p-5 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center group hover:border-[#18A6A4]/30 transition-colors">
                             <img src="https://i.ibb.co/5gcmTJDY/Design-sem-nome-2.png" alt="Alvo 3D" className="w-14 h-14 object-contain mb-2 group-hover:scale-110 transition-transform drop-shadow-sm" />

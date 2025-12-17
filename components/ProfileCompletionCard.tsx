@@ -1,5 +1,5 @@
-import React from 'react';
-import { CheckCircle2, Circle, Trophy, ChevronRight, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle2, Circle, Trophy, ChevronRight, Sparkles, ChevronDown } from 'lucide-react';
 import { ProfileTaskKey, ProfileTaskMetadata } from '../types';
 
 interface ProfileCompletionCardProps {
@@ -17,12 +17,13 @@ export const ProfileCompletionCard: React.FC<ProfileCompletionCardProps> = ({
     tasks,
     onTaskClick
 }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
     const incompleteTasks = tasks.filter(t => !t.completed);
     const completedTasks = tasks.filter(t => t.completed);
     const totalXPAvailable = incompleteTasks.reduce((sum, t) => sum + t.metadata.xp_reward, 0);
 
     return (
-        <div className="bg-gradient-to-br from-white to-amber-50 rounded-2xl p-5 shadow-md border-2 border-amber-100">
+        <div className="bg-gradient-to-br from-white to-amber-50 rounded-2xl p-5 shadow-md border-2 border-amber-100 transition-all duration-300">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -59,52 +60,69 @@ export const ProfileCompletionCard: React.FC<ProfileCompletionCardProps> = ({
                 </div>
             </div>
 
-            {/* Task List */}
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-                {tasks.slice(0, 6).map(task => (
-                    <button
-                        key={task.key}
-                        onClick={() => !task.completed && onTaskClick(task.key)}
-                        disabled={task.completed}
-                        className={`w-full flex items-center justify-between p-3 rounded-xl transition group ${task.completed
+            {/* Toggle Button */}
+            <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-full flex items-center justify-center gap-2 py-2 text-sm font-semibold text-slate-600 hover:text-teal-600 transition-colors group"
+            >
+                <span>{isExpanded ? 'Ocultar tarefas' : 'Ver tarefas'}</span>
+                <ChevronDown
+                    size={18}
+                    className={`transition-transform duration-300 group-hover:text-teal-600 ${isExpanded ? 'rotate-180' : ''}`}
+                />
+            </button>
+
+            {/* Task List - Collapsible */}
+            <div
+                className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[500px] opacity-100 mt-3' : 'max-h-0 opacity-0'
+                    }`}
+            >
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {tasks.slice(0, 6).map(task => (
+                        <button
+                            key={task.key}
+                            onClick={() => !task.completed && onTaskClick(task.key)}
+                            disabled={task.completed}
+                            className={`w-full flex items-center justify-between p-3 rounded-xl transition group ${task.completed
                                 ? 'bg-green-50 border border-green-200 cursor-default'
                                 : 'bg-white hover:bg-teal-50 border border-slate-200 hover:border-teal-300 hover:shadow-md cursor-pointer'
-                            }`}
-                    >
-                        <div className="flex items-center gap-3">
-                            {task.completed ? (
-                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
-                                    <CheckCircle2 className="text-white" size={16} />
+                                }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                {task.completed ? (
+                                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
+                                        <CheckCircle2 className="text-white" size={16} />
+                                    </div>
+                                ) : (
+                                    <div className="w-6 h-6 border-2 border-slate-300 rounded-full flex items-center justify-center group-hover:border-teal-500 transition">
+                                        <Circle className="text-slate-300 group-hover:text-teal-500 transition" size={14} />
+                                    </div>
+                                )}
+                                <div className="text-left">
+                                    <p className={`text-sm font-semibold ${task.completed ? 'text-green-700 line-through' : 'text-slate-700'}`}>
+                                        {task.metadata.icon} {task.metadata.title}
+                                    </p>
+                                    <p className="text-xs text-slate-500">{task.metadata.description}</p>
                                 </div>
-                            ) : (
-                                <div className="w-6 h-6 border-2 border-slate-300 rounded-full flex items-center justify-center group-hover:border-teal-500 transition">
-                                    <Circle className="text-slate-300 group-hover:text-teal-500 transition" size={14} />
+                            </div>
+                            {!task.completed && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200">
+                                        +{task.metadata.xp_reward} XP
+                                    </span>
+                                    <ChevronRight className="text-slate-300 group-hover:text-teal-500 group-hover:translate-x-1 transition" size={18} />
                                 </div>
                             )}
-                            <div className="text-left">
-                                <p className={`text-sm font-semibold ${task.completed ? 'text-green-700 line-through' : 'text-slate-700'}`}>
-                                    {task.metadata.icon} {task.metadata.title}
-                                </p>
-                                <p className="text-xs text-slate-500">{task.metadata.description}</p>
-                            </div>
-                        </div>
-                        {!task.completed && (
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200">
-                                    +{task.metadata.xp_reward} XP
-                                </span>
-                                <ChevronRight className="text-slate-300 group-hover:text-teal-500 group-hover:translate-x-1 transition" size={18} />
-                            </div>
-                        )}
-                    </button>
-                ))}
-            </div>
+                        </button>
+                    ))}
+                </div>
 
-            {incompleteTasks.length > 6 && (
-                <p className="text-xs text-center text-slate-400 mt-3 font-medium">
-                    +{incompleteTasks.length - 6} tarefas restantes
-                </p>
-            )}
+                {incompleteTasks.length > 6 && (
+                    <p className="text-xs text-center text-slate-400 mt-3 font-medium">
+                        +{incompleteTasks.length - 6} tarefas restantes
+                    </p>
+                )}
+            </div>
 
             {completionPercentage === 100 && (
                 <div className="mt-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white p-4 rounded-xl text-center shadow-lg">
