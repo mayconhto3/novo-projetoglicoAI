@@ -522,18 +522,23 @@ serve(async (req) => {
     ];
 
     // Save meal data if detected
-    if (mediaProcessed && mimeType.startsWith("image") && parsedData.carbs) {
+    if (mediaProcessed && mimeType.startsWith("image")) {
+      // Extrair valores do JSON se disponível, senão usar null
+      const carbs = parsedData.carbs || null;
+      const calories = parsedData.calories || null;
+      const insulin = parsedData.insulin || null;
+
       savePromises.push(
         supabase.from("meal_history").insert({
           user_id: userId,
           created_at: new Date().toISOString(),
-          meal_time: inferMealTime(new Date()),
+          meal_label: inferMealTime(new Date()),
           description: message || "Refeição via foto",
-          carbs: parsedData.carbs,
-          calories: parsedData.calories || null,
-          insulin_suggested: parsedData.insulin || 0,
+          carbs: carbs,
+          calories: calories,
+          insulin_suggested: insulin,
           insulin_taken: null,
-          ai_feedback: replyText,
+          assistant_comment: replyText,
           favorite: false
         })
       );
