@@ -12,6 +12,7 @@ export interface GlucoseExtraction {
     unit: 'mg/dL';
     confidence: number;
     method: 'regex' | 'nlp' | 'ai';
+    needsConfirmation?: boolean; // ✅ FASE 2: Padrões fracos precisam confirmação
 }
 
 export interface InsulinExtraction {
@@ -19,6 +20,7 @@ export interface InsulinExtraction {
     type: 'rapid' | 'basal' | 'mixed' | 'unknown';
     confidence: number;
     method: 'regex' | 'nlp' | 'ai';
+    needsConfirmation?: boolean; // ✅ FASE 2: Padrões fracos precisam confirmação
 }
 
 export interface MealExtraction {
@@ -26,6 +28,7 @@ export interface MealExtraction {
     confidence: number;
     method: 'regex' | 'nlp' | 'ai' | 'image';
     hasImage: boolean;
+    needsConfirmation?: boolean; // ✅ FASE 2: Padrões fracos precisam confirmação
 }
 
 export interface ExtractionResult {
@@ -34,6 +37,60 @@ export interface ExtractionResult {
     meal?: MealExtraction;
     confidence: number;
     primaryType: 'glucose' | 'insulin' | 'meal' | 'unknown';
+    wasBlocked?: boolean; // ✅ NOVO: Indica se foi bloqueado por guardrail
+    blockReason?: string; // ✅ NOVO: Motivo do bloqueio
+}
+
+// ============================================================================
+// PORTÃO 1: GUARDRAILS (KILL SWITCH)
+// ============================================================================
+
+/**
+ * Detecta se a mensagem é ambígua (pergunta ou dúvida).
+ * Se TRUE, PROIBIDO acionar Regex. Vai direto para IA.
+ * 
+ * PRIORIDADE ZERO: Eliminar falsos positivos que geram responsabilidade médica.
+ * Exemplo crítico: "Eu deveria tomar 4 unidades?" → TRUE (não salva nada)
+ */
+export function isAmbiguous(text: string): { isAmbiguous: boolean; reason?: string } {
+    const normalized = text.toLowerCase().trim();
+
+    // Regra 1: Contém ponto de interrogação
+    if (normalized.includes('?')) {
+        return { isAmbiguous: true, reason: 'contains_question_mark' };
+    }
+
+    // Regra 2: Palavras de incerteza (responsabilidade médica)
+    const uncertaintyWords = [
+        'devo', 'deveria', 'deverá',
+        'posso', 'poderia', 'poderá',
+        'será', 'seria',
+        'acho', 'acha',
+        'talvez', 'pode ser',
+        'não sei', 'nao sei',
+        'dúvida', 'duvida',
+        'pergunta',
+        'como faço', 'como faco',
+        'o que faço', 'o que faco'
+    ];
+
+    for (const word of uncertaintyWords) {
+        if (normalized.includes(word)) {
+            return { isAmbiguous: true, reason: `uncertainty_word: "${word}"` };
+        }
+    }
+
+    // Regra 3: Mensagem muito longa (>50 chars) = contexto complexo
+    // Exceção: Se for apenas uma lista de alimentos, não bloquear
+    if (text.length > 50) {
+        // Verificar se não é apenas lista de comida
+        const hasComplexContext = /\s(e|com|mas|porém|porque|pois|então)\s/i.test(text);
+        if (hasComplexContext) {
+            return { isAmbiguous: true, reason: 'complex_context (>50 chars with conjunctions)' };
+        }
+    }
+
+    return { isAmbiguous: false };
 }
 
 // ============================================================================
@@ -63,6 +120,13 @@ const GLUCOSE_PATTERNS = [
 export function extractGlucose(text: string): GlucoseExtraction | null {
     const normalized = text.toLowerCase().trim();
 
+    // ✅ PORTÃO 1: Verificar ambiguidade ANTES de processar
+    const ambiguityCheck = isAmbiguous(text);
+    if (ambiguityCheck.isAmbiguous) {
+        console.log(`[Guardrail] Blocked glucose extraction: "${text}" - Reason: ${ambiguityCheck.reason}`);
+        return null; // Deixa para IA processar
+    }
+
     // Testar cada padrão em ordem de especificidade
     for (let i = 0; i < GLUCOSE_PATTERNS.length; i++) {
         const match = normalized.match(GLUCOSE_PATTERNS[i]);
@@ -75,11 +139,20 @@ export function extractGlucose(text: string): GlucoseExtraction | null {
                 // Confiança decresce com padrões menos específicos
                 const confidence = 0.95 - (i * 0.08);
 
+                // ✅ FASE 2: Padrões fracos (>=4) ou apenas número (5) precisam confirmação
+                // Padrão 5 (índice 5): /^(\d{2,3})$/ - apenas número
+                const needsConfirmation = i >= 4;
+
+                if (needsConfirmation) {
+                    console.log(`[Regex Hardening] Weak pattern match (index ${i}): "${text}" - Needs confirmation`);
+                }
+
                 return {
                     value,
                     unit: 'mg/dL',
                     confidence: Math.max(confidence, 0.6),
-                    method: 'regex'
+                    method: 'regex',
+                    needsConfirmation
                 };
             }
         }
@@ -109,6 +182,13 @@ const INSULIN_PATTERNS = [
 export function extractInsulin(text: string): InsulinExtraction | null {
     const normalized = text.toLowerCase().trim();
 
+    // ✅ PORTÃO 1: Verificar ambiguidade ANTES de processar
+    const ambiguityCheck = isAmbiguous(text);
+    if (ambiguityCheck.isAmbiguous) {
+        console.log(`[Guardrail] Blocked insulin extraction: "${text}" - Reason: ${ambiguityCheck.reason}`);
+        return null; // Deixa para IA processar
+    }
+
     for (let i = 0; i < INSULIN_PATTERNS.length; i++) {
         const match = normalized.match(INSULIN_PATTERNS[i]);
 
@@ -134,11 +214,20 @@ export function extractInsulin(text: string): InsulinExtraction | null {
 
                 const confidence = 0.92 - (i * 0.1);
 
+                // ✅ FASE 2: Padrões fracos (>=2) precisam confirmação
+                // Padrão 3 (índice 3): /(\d{1,2}(?:[.,]\d)?)\s*u(?:nidades?)?$/ - apenas número+u
+                const needsConfirmation = i >= 2;
+
+                if (needsConfirmation) {
+                    console.log(`[Regex Hardening] Weak insulin pattern (index ${i}): "${text}" - Needs confirmation`);
+                }
+
                 return {
                     units,
                     type,
                     confidence: Math.max(confidence, 0.6),
-                    method: 'regex'
+                    method: 'regex',
+                    needsConfirmation
                 };
             }
         }
@@ -174,14 +263,22 @@ const COMMON_FOODS = [
 export function extractMeal(text: string, hasImage: boolean = false): MealExtraction | null {
     const normalized = text.toLowerCase().trim();
 
-    // Se tem imagem, alta prioridade
+    // Se tem imagem, alta prioridade (bypass guardrail)
     if (hasImage) {
         return {
             description: 'Refeição (via foto)',
             confidence: 0.95,
             method: 'image',
-            hasImage: true
+            hasImage: true,
+            needsConfirmation: false // Imagem é evidência forte
         };
+    }
+
+    // ✅ PORTÃO 1: Verificar ambiguidade ANTES de processar
+    const ambiguityCheck = isAmbiguous(text);
+    if (ambiguityCheck.isAmbiguous) {
+        console.log(`[Guardrail] Blocked meal extraction: "${text}" - Reason: ${ambiguityCheck.reason}`);
+        return null; // Deixa para IA processar
     }
 
     // Testar padrões
@@ -192,11 +289,19 @@ export function extractMeal(text: string, hasImage: boolean = false): MealExtrac
             const description = match[1]?.trim() || normalized;
             const confidence = 0.88 - (i * 0.12);
 
+            // ✅ FASE 2: Padrões fracos (>=2) precisam confirmação
+            const needsConfirmation = i >= 2;
+
+            if (needsConfirmation) {
+                console.log(`[Regex Hardening] Weak meal pattern (index ${i}): "${text}" - Needs confirmation`);
+            }
+
             return {
                 description,
                 confidence: Math.max(confidence, 0.5),
                 method: 'regex',
-                hasImage: false
+                hasImage: false,
+                needsConfirmation
             };
         }
     }
@@ -204,11 +309,15 @@ export function extractMeal(text: string, hasImage: boolean = false): MealExtrac
     // Fallback: verificar se menciona alimentos comuns
     const hasFoodMention = COMMON_FOODS.some(food => normalized.includes(food));
     if (hasFoodMention) {
+        // ✅ FASE 2: NLP sempre precisa confirmação (baixa confiança)
+        console.log(`[Regex Hardening] NLP food detection: "${text}" - Needs confirmation`);
+
         return {
             description: normalized,
             confidence: 0.6,
             method: 'nlp',
-            hasImage: false
+            hasImage: false,
+            needsConfirmation: true // NLP é menos confiável
         };
     }
 
@@ -220,6 +329,18 @@ export function extractMeal(text: string, hasImage: boolean = false): MealExtrac
 // ============================================================================
 
 export function analyzeMessage(text: string, hasImage: boolean = false): ExtractionResult {
+    // ✅ PORTÃO 1: Verificar ambiguidade no nível de orquestração
+    const ambiguityCheck = isAmbiguous(text);
+    if (ambiguityCheck.isAmbiguous) {
+        console.log(`[Guardrail] Message blocked at orchestration level: "${text}" - Reason: ${ambiguityCheck.reason}`);
+        return {
+            confidence: 0,
+            primaryType: 'unknown',
+            wasBlocked: true,
+            blockReason: ambiguityCheck.reason
+        };
+    }
+
     const glucose = extractGlucose(text);
     const insulin = extractInsulin(text);
     const meal = extractMeal(text, hasImage);
@@ -248,7 +369,8 @@ export function analyzeMessage(text: string, hasImage: boolean = false): Extract
         insulin: insulin || undefined,
         meal: meal || undefined,
         confidence: maxConfidence,
-        primaryType
+        primaryType,
+        wasBlocked: false
     };
 }
 

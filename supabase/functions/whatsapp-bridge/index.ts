@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { GEMINI_TOOLS, getPeriodFilter, getTableName } from './gemini-tools.ts';
+import { processFunctionCalls } from './function-handlers.ts';
 
 // TIPOS
 declare const Deno: {
@@ -225,16 +227,28 @@ ${readings.length > 0 ? readings.slice(-5).map(r => `- ${new Date(r.timestamp).t
 `;
 };
 
-// CHAMADA GEMINI
+// CHAMADA GEMINI COM FUNCTION CALLING
+// ⚠️ FASE 3: Suporta Function Calling com depth limit para evitar loops infinitos
 async function callGemini(
   promptParts: any[],
   systemInstruction: string,
+  userId?: string,
+  supabase?: any,
+  depth: number = 0
 ): Promise<string> {
   const apiKey = Deno.env.get("API_KEY");
   if (!apiKey) throw new Error("API_KEY do Gemini não configurada.");
 
+  // ⚠️ SAFETY LOOP: Limite de profundidade para evitar loops infinitos
+  const MAX_DEPTH = 3;
+  if (depth >= MAX_DEPTH) {
+    console.warn(`[Function Call] Depth limit reached (${depth}). Returning text response.`);
+    // Forçar resposta de texto sem tools
+    return await callGeminiTextOnly(promptParts, systemInstruction);
+  }
+
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
     apiKey;
 
   const body = {
@@ -247,12 +261,103 @@ async function callGemini(
     ],
     generationConfig: {
       temperature: 0.5,
-      maxOutputTokens: 4096, // Aumentado de 1000 para 4096 para evitar cortes
+      maxOutputTokens: 4096,
     },
     systemInstruction: {
       role: "system",
       parts: [{ text: systemInstruction }],
     },
+    // ✅ FASE 3: Adicionar tools se userId e supabase estiverem disponíveis
+    ...(userId && supabase ? { tools: [{ functionDeclarations: GEMINI_TOOLS }] } : {})
+  };
+
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const data = await resp.json();
+
+  if (!resp.ok) {
+    console.error("Gemini Error:", JSON.stringify(data));
+    throw new Error(data?.error?.message || "Erro na IA");
+  }
+
+  const candidate = data?.candidates?.[0];
+  if (!candidate) {
+    throw new Error("Nenhuma resposta da IA");
+  }
+
+  const parts = candidate.content?.parts || [];
+
+  // ✅ FASE 3: CORREÇÃO CRÍTICA 3 - Verificar se há function calls (parallel calls support)
+  const hasFunctionCalls = parts.some((p: any) => p.functionCall);
+
+  if (hasFunctionCalls && userId && supabase) {
+    console.log(`[Function Call] IA solicitou ${parts.filter((p: any) => p.functionCall).length} chamada(s) de função (depth: ${depth})`);
+
+    // Processar todas as function calls
+    const functionResults = await processFunctionCalls(
+      parts,
+      userId,
+      supabase,
+      inferMealTime,
+      getPeriodFilter,
+      getTableName
+    );
+
+    // Construir resposta com os resultados das funções
+    const functionResponseParts = functionResults.map((result, index) => ({
+      functionResponse: {
+        name: parts.filter((p: any) => p.functionCall)[index]?.functionCall?.name || 'unknown',
+        response: result
+      }
+    }));
+
+    // Segunda chamada à IA com os resultados das funções
+    const newPromptParts = [
+      ...promptParts,
+      ...functionResponseParts
+    ];
+
+    // Recursão com depth incrementado
+    return await callGemini(newPromptParts, systemInstruction, userId, supabase, depth + 1);
+  }
+
+  // Se não houver function calls, retornar texto normal
+  return parts.map((p: any) => p.text || "").join("") || "";
+}
+
+// Função auxiliar para forçar resposta de texto (sem tools)
+async function callGeminiTextOnly(
+  promptParts: any[],
+  systemInstruction: string
+): Promise<string> {
+  const apiKey = Deno.env.get("API_KEY");
+  if (!apiKey) throw new Error("API_KEY do Gemini não configurada.");
+
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
+    apiKey;
+
+  const body = {
+    contents: [{ role: "user", parts: promptParts }],
+    safetySettings: [
+      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+    ],
+    generationConfig: {
+      temperature: 0.5,
+      maxOutputTokens: 4096,
+    },
+    systemInstruction: {
+      role: "system",
+      parts: [{ text: systemInstruction }],
+    },
+    // SEM tools
   };
 
   const resp = await fetch(url, {
@@ -415,7 +520,8 @@ serve(async (req) => {
     chatHistory.forEach(h => fullPromptParts.push({ text: `[${h.role}] ${h.parts[0].text}` }));
     promptParts.forEach(p => fullPromptParts.push(p));
 
-    const rawReplyText = await callGemini(fullPromptParts, systemInstruction);
+    // ✅ FASE 3: Passar userId e supabase para ativar Function Calling
+    const rawReplyText = await callGemini(fullPromptParts, systemInstruction, userId, supabase);
 
     // 5. Pós-processamento
     let replyText = rawReplyText;
@@ -552,6 +658,20 @@ serve(async (req) => {
           value: extractedGlucose.value,
           type: extractedGlucose.type,
           timestamp: extractedGlucose.timestamp
+        })
+      );
+    }
+
+    // Save insulin suggestion to insulin_history for chart visibility
+    if (parsedData.insulin && parsedData.insulin > 0) {
+      savePromises.push(
+        supabase.from("insulin_history").insert({
+          user_id: userId,
+          created_at: new Date().toISOString(),
+          insulin_type: 'Bolus',
+          context: inferMealTime(new Date()),
+          units: parsedData.insulin,
+          note: 'Sugerido pela IA'
         })
       );
     }
