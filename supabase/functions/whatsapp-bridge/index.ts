@@ -358,20 +358,36 @@ serve(async (req) => {
       if (match) {
         console.log(`[Regex] Capturada glicemia: ${match.value} ${match.type}`);
 
-        // A. Salvar IMEDIATAMENTE no Banco
-        const { error: saveError } = await supabase
+        // 🚨 CHECK IDEMPOTÊNCIA: Verificar se já salvou nos últimos 2 minutos
+        // (Evita duplicidade por retries de webhook)
+        const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        const { data: existingReadings } = await supabase
           .from('glucose_readings')
-          .insert({
-            user_id: userId,
-            value: match.value,
-            type: match.type,
-            timestamp: new Date().toISOString()
-          });
+          .select('id')
+          .eq('user_id', userId)
+          .eq('value', match.value)
+          .gte('timestamp', twoMinutesAgo)
+          .limit(1);
 
-        if (!saveError) {
-          extractedGlucoseViaRegex = match; // Flag de sucesso
+        if (existingReadings && existingReadings.length > 0) {
+          console.log('[Regex] Leitura duplicada detectada (Webhook Retry?). Usando existente.');
+          extractedGlucoseViaRegex = match; // Marca como sucesso para gerar feedback
         } else {
-          console.error('[Regex] Erro ao salvar:', saveError);
+          // A. Salvar IMEDIATAMENTE no Banco
+          const { error: saveError } = await supabase
+            .from('glucose_readings')
+            .insert({
+              user_id: userId,
+              value: match.value,
+              type: match.type,
+              timestamp: new Date().toISOString()
+            });
+
+          if (!saveError) {
+            extractedGlucoseViaRegex = match; // Flag de sucesso
+          } else {
+            console.error('[Regex] Erro ao salvar:', saveError);
+          }
         }
       }
     }
@@ -487,13 +503,30 @@ serve(async (req) => {
     // ✅ FASE 3: Chamada com Tools (Function Calling)
     const replyText = await callGemini(fullPromptParts, systemInstruction, userId, supabase);
 
-    // 6. Salvamento do Chat
+    // 6. Salvamento (CORRIGIDO)
+    // Mantemos APENAS o histórico do chat. 
+    // Os dados médicos (glicemia, refeição, insulina) JÁ FORAM SALVOS pela Tool (handleRegistrarEvento).
+
     const savePromises: Promise<any>[] = [
       supabase.from("chat_history").insert([
-        { user_id: userId, role: "user", content: message || (base64Data ? `[Mídia: ${mimeType}]` : "Oi"), is_audio: mimeType?.startsWith("audio"), is_image: mimeType?.startsWith("image") },
-        { user_id: userId, role: "model", content: replyText }
+        {
+          user_id: userId,
+          role: "user",
+          content: message || (base64Data ? `[Mídia: ${mimeType}]` : "Oi"), // Usar base64Data check pois mediaProcessed removido
+          is_audio: mimeType?.startsWith("audio"),
+          is_image: mimeType?.startsWith("image")
+        },
+        {
+          user_id: userId,
+          role: "model",
+          content: replyText
+        }
       ])
     ];
+
+    // ❌ BLOCO REMOVIDO: Insert de meal_history (Causava duplicidade)
+    // ❌ BLOCO REMOVIDO: Insert de glucose_readings (Causava duplicidade)
+    // ❌ BLOCO REMOVIDO: Insert de insulin_history (Causava duplicidade)
 
     Promise.all(savePromises).catch(err => console.error("Erro ao salvar histórico:", err));
 

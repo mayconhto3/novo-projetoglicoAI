@@ -19,9 +19,34 @@ export async function handleRegistrarEvento(
 ): Promise<any> {
     const { tipo, glicemia, insulina, refeicao } = args;
 
+    // Helper: Check Idempotency (2 minutes window)
+    const checkIdempotency = async (table: string, criteria: any) => {
+        const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        let query = supabase.from(table).select('id').eq('user_id', userId).gte('created_at', twoMinutesAgo);
+
+        // Adjust for glucose table timestamp field
+        if (table === 'glucose_readings') {
+            query = supabase.from(table).select('id').eq('user_id', userId).gte('timestamp', twoMinutesAgo);
+        }
+
+        for (const key in criteria) {
+            query = query.eq(key, criteria[key]);
+        }
+
+        const { data } = await query.limit(1);
+        return data && data.length > 0;
+    };
+
     try {
         // GLICEMIA
         if (tipo === 'glicemia' && glicemia) {
+            // Idempotency Check
+            const isDuplicate = await checkIdempotency('glucose_readings', { value: glicemia.valor });
+            if (isDuplicate) {
+                console.log(`[Function Call] Glicemia duplicada ignorada: ${glicemia.valor}`);
+                return { success: true, message: `Glicemia já registrada anteriormente: ${glicemia.valor} mg/dL` };
+            }
+
             const { data, error } = await supabase
                 .from('glucose_readings')
                 .insert({
@@ -42,6 +67,13 @@ export async function handleRegistrarEvento(
 
         // INSULINA
         if (tipo === 'insulina' && insulina) {
+            // Idempotency Check
+            const isDuplicate = await checkIdempotency('insulin_history', { units: insulina.unidades });
+            if (isDuplicate) {
+                console.log(`[Function Call] Insulina duplicada ignorada: ${insulina.unidades}`);
+                return { success: true, message: `Insulina já registrada anteriormente: ${insulina.unidades}u` };
+            }
+
             // Mapear tipo de insulina para formato do banco
             let insulinType = 'Bolus';
             if (insulina.tipo_insulina === 'basal') {
@@ -72,6 +104,13 @@ export async function handleRegistrarEvento(
 
         // REFEIÇÃO
         if (tipo === 'refeicao' && refeicao) {
+            // Idempotency Check (Check description)
+            const isDuplicate = await checkIdempotency('meal_history', { description: refeicao.descricao });
+            if (isDuplicate) {
+                console.log(`[Function Call] Refeição duplicada ignorada: ${refeicao.descricao}`);
+                return { success: true, message: `Refeição já registrada anteriormente.` };
+            }
+
             const { data, error } = await supabase
                 .from('meal_history')
                 .insert({
