@@ -1,0 +1,141 @@
+/* Paleta Mint/Teal - GlucoAI Redesign */
+
+:root {
+  /* Background */
+  --bg-primary: #D4F4F4;
+  --bg-card: #FFFFFF;
+  
+  /* Accent Colors */
+  --accent-primary: #4DB8A8;
+  --accent-primary-hover: #3DA89A;
+  --accent-secondary: #FF7A59;
+  --accent-warning: #EF4444;
+  --accent-success: #10B981;
+  
+  /* Text */
+  --text-primary: #1E3A3A;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+  
+  /* Chart */
+  --chart-line: #4DB8A8;
+  --chart-area: #B8E6E0;
+  
+  /* Status */
+  --status-normal: #10B981;
+  --status-high: #EF4444;
+  --status-low: #F59E0B;
+}
+
+/* Global Styles */
+body {
+  background-color: var(--bg-primary);
+}
+
+/* Card Styles */
+.card-mint {
+  background-color: var(--bg-card);
+  border-radius: 24px;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+}
+
+/* Button Styles */
+.btn-mint-primary {
+  background-color: var(--accent-primary);
+  color: white;
+  border-radius: 16px;
+  padding: 16px 32px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.btn-mint-primary:hover {
+  background-color: var(--accent-primary-hover);
+}
+
+/* Badge Styles */
+.badge-mint {
+  background-color: var(--accent-primary);
+  color: white;
+  border-radius: 9999px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.badge-xp {
+  background-color: var(--accent-secondary);
+  color: white;
+  border-radius: 9999px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.badge-level {
+  background-color: white;
+  border: 2px solid var(--accent-primary);
+  color: var(--text-primary);
+  border-radius: 9999px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Status Badge */
+.status-normal {
+  background-color: var(--status-normal);
+  color: white;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-high {
+  background-color: var(--status-high);
+  color: white;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-low {
+  background-color: var(--status-low);
+  color: white;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Text Styles */
+.text-mint-primary {
+  color: var(--text-primary);
+}
+
+.text-mint-secondary {
+  color: var(--text-secondary);
+}
+
+.text-mint-muted {
+  color: var(--text-muted);
+}
+
+/* Progress Bar */
+.progress-mint {
+  background-color: var(--accent-primary);
+  height: 12px;
+  border-radius: 9999px;
+}
+
+.progress-bg {
+  background-color: #E5E7EB;
+  height: 12px;
+  border-radius: 9999px;
+  overflow: hidden;
+}
