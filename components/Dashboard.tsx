@@ -407,12 +407,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                     </div>
                 </header>
 
-                <main className="max-w-lg mx-auto px-6 py-6 space-y-6">
+                <main className="max-w-lg mx-auto px-6 py-6 space-y-3">
 
                     {/* 1. Glucose Card - PRIMEIRO */}
                     <div
                         onClick={() => setActiveScreen('glucose')}
-                        className="bg-[#029491] rounded-3xl p-6 shadow-lg shadow-[#0d4a4b]/10 border border-white/10 relative overflow-hidden group cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
+                        className="bg-[#1abc9c] rounded-3xl p-6 shadow-lg shadow-[#0d4a4b]/10 border border-white/10 relative overflow-hidden group cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
                     >
                         <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-bl-[5rem] -mr-10 -mt-10 transition-transform group-hover:scale-105 duration-700"></div>
                         <div className="flex justify-between items-start mb-2 relative z-10">

@@ -358,15 +358,15 @@ serve(async (req) => {
       if (match) {
         console.log(`[Regex] Capturada glicemia: ${match.value} ${match.type}`);
 
-        // 🚨 CHECK IDEMPOTÊNCIA: Verificar se já salvou nos últimos 2 minutos
-        // (Evita duplicidade por retries de webhook)
-        const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        // 🚨 CHECK IDEMPOTÊNCIA: Verificar se já salvou nos últimos 10 minutos
+        // (Evita duplicidade por retries de webhook - aumentado de 2 para 10 min)
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
         const { data: existingReadings } = await supabase
           .from('glucose_readings')
           .select('id')
           .eq('user_id', userId)
           .eq('value', match.value)
-          .gte('timestamp', twoMinutesAgo)
+          .gte('timestamp', tenMinutesAgo)
           .limit(1);
 
         if (existingReadings && existingReadings.length > 0) {

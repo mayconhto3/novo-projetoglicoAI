@@ -19,14 +19,14 @@ export async function handleRegistrarEvento(
 ): Promise<any> {
     const { tipo, glicemia, insulina, refeicao } = args;
 
-    // Helper: Check Idempotency (2 minutes window)
+    // Helper: Check Idempotency (10 minutes window - aumentado de 2 para 10 min)
     const checkIdempotency = async (table: string, criteria: any) => {
-        const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-        let query = supabase.from(table).select('id').eq('user_id', userId).gte('created_at', twoMinutesAgo);
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        let query = supabase.from(table).select('id').eq('user_id', userId).gte('created_at', tenMinutesAgo);
 
         // Adjust for glucose table timestamp field
         if (table === 'glucose_readings') {
-            query = supabase.from(table).select('id').eq('user_id', userId).gte('timestamp', twoMinutesAgo);
+            query = supabase.from(table).select('id').eq('user_id', userId).gte('timestamp', tenMinutesAgo);
         }
 
         for (const key in criteria) {
