@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { GEMINI_TOOLS, getPeriodFilter, getTableName } from './gemini-tools.ts';
 import { processFunctionCalls } from './function-handlers.ts';
+import { findUserProfile, UserProfile } from './services/profileService.ts';
+import { processGlucoseRegex, extractGlucoseFromText } from './services/glucoseService.ts';
 
 // TIPOS
 declare const Deno: {
@@ -16,45 +18,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface UserProfile {
-  name: string;
-  birthDate: string;
-  gender: string;
-  phone: string;
-  weight: number;
-  height: number;
-  diabetesType: string;
-  diagnosisYear: number;
-  hba1c?: number;
-  usesInsulin: boolean;
-  insulinDuration?: number;
-  basalInsulin?: {
-    brand?: string;
-    morningDose?: number;
-    nightDose?: number;
-  };
-  bolusInsulin?: { brand?: string };
-  icRatioBreakfast?: number;
-  icRatioLunch?: number;
-  icRatioDinner?: number;
-  icRatioSnack?: number;
-  isfMorning?: number;
-  targetGlucosePreMeal: number;
-  targetGlucosePostMeal: number;
-  hypoglycemiaFrequency?: string;
-  hypoglycemiaSymptoms?: string[];
-  comorbidities?: string[];
-  dietType?: string[];
-  problematicFoods?: string[];
-  carbCountingKnowledge?: string;
-  exerciseFrequency: string;
-  exerciseType?: string[];
-  smoker: string;
-  alcoholConsumption: string;
-  medicationsAffectingGlucose?: string[];
-  communicationStyle: string;
-  caregiver?: { active: boolean; name: string };
-}
+// Interface UserProfile agora importada de profileService.ts
 
 interface GlucoseReading {
   value: number;
@@ -62,35 +26,8 @@ interface GlucoseReading {
   type: string;
 }
 
-// UTILITY FUNCTIONS FOR GLUCOSE EXTRACTION
-function extractGlucoseFromText(message: string): { value: number; type: string } | null {
-  if (!message) return null;
+// extractGlucoseFromText agora importado de glucoseService.ts
 
-  // REGEX ROBUSTO (Regex-First Architecture)
-  // Aceita: "Glicemia 103", "Glicemia de 103", "Glicemia atual 103", "Glicemia está em 103"
-  const glucosePattern = /(?:glicemia|glicose|glucose|gli|açúcar)\s*(?:atual|agora|hoje|do momento)?\s*(?:está?|tá|é|foi|deu|marcou|mediu?)?\s*(?:em|de|a|:)?\s*(\d{2,3})/i;
-
-  const match = message.match(glucosePattern);
-  if (match && match[1]) {
-    const value = parseInt(match[1]);
-
-    // Validate range (20-600 mg/dL)
-    if (value < 20 || value > 600) return null;
-
-    // Infer context based on time (Simplified for immediate capture)
-    const hour = new Date().getHours();
-    let type = 'Correction';
-    if (hour >= 6 && hour < 9) type = 'Fasting';
-    else if (hour >= 11 && hour < 13) type = 'Pre-Meal';
-    else if (hour >= 13 && hour < 15) type = 'Post-Meal';
-    else if (hour >= 18 && hour < 20) type = 'Pre-Meal';
-    else if (hour >= 20 && hour < 22) type = 'Post-Meal';
-
-    return { value, type };
-  }
-
-  return null;
-}
 
 function inferMealTime(timestamp: Date): string {
   const hour = timestamp.getHours();
@@ -119,7 +56,8 @@ OBJETIVO: Gerenciar glicemia com segurança absoluta.
 
 === PERFIL (Resumo Crítico) ===
 Paciente: ${profile.name} (${profile.diabetesType})
-Peso: ${profile.weight}kg | Insulina: ${profile.usesInsulin ? "SIM" : "NÃO"}
+Peso: ${profile.weight}kg | Insulina Ativa (IOB): ${activeInsulin.toFixed(1)}u
+Insulina: ${profile.usesInsulin ? "SIM" : "NÃO"}
 Basal: ${profile.basalInsulin?.brand || "-"} | Bolus: ${profile.bolusInsulin?.brand || "-"}
 
 === PARÂMETROS DE CÁLCULO ===
@@ -132,20 +70,16 @@ Basal: ${profile.basalInsulin?.brand || "-"} | Bolus: ${profile.bolusInsulin?.br
 * Metas: ${profile.targetGlucosePreMeal}-${profile.targetGlucosePostMeal} mg/dL
 
 === ESTADO ATUAL (DADOS DO SISTEMA) ===
-1. IOB (INSULINA ATIVA RESIDUAL): ${activeInsulin.toFixed(1)} u
-   IMPORTANTE: Este valor é o resto de insulina de aplicações PASSADAS (feitas há horas) que ainda está circulando no sangue. 
-   NÃO É UMA APLICAÇÃO RECENTE PARA A REFEIÇÃO ATUAL.
-   Use este valor apenas para reduzir a dose sugerida e evitar hipoglicemia (empilhamento).
-
-2. ÚLTIMAS LEITURAS DE GLICEMIA:
+ÚLTIMAS LEITURAS DE GLICEMIA:
 ${readings.length > 0 ? readings.slice(-5).map(r => `- ${new Date(r.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}: ${r.value} (${r.type})`).join("\n") : "Sem dados recentes."}
 
 === REGRAS DE CONDUTA ===
-1. FOTO DE COMIDA/ÁUDIO: Se receber uma foto ou áudio descrevendo comida, sua tarefa PRIMÁRIA é identificar os alimentos e ESTIMAR OS CARBOIDRATOS TOTAIS em gramas.
-2. CÁLCULO: Se o usuário usa insulina, calcule a dose sugerida: (Total Carbos / Ratio IC do horário) + Correção se necessário - IOB.
-3. SEGURANÇA: Sempre avise que a contagem por foto é uma estimativa.
-4. CONCISÃO: Seja direto e objetivo nas explicações. Evite textos excessivamente longos que possam cortar.
-5. REGISTRO DE DADOS: OBRIGATÓRIO usar as ferramentas (Function Calling) 'registrar_evento' para salvar refeições, insulinas ou glicemias que NÃO foram capturadas automaticamente.
+1. IOB (INSULINA ATIVA): Sempre use o valor exato do PERFIL acima. Não calcule manualmente baseado em doses aplicadas.
+2. FOTO DE COMIDA/ÁUDIO: Se receber uma foto ou áudio descrevendo comida, sua tarefa PRIMÁRIA é identificar os alimentos e ESTIMAR OS CARBOIDRATOS TOTAIS em gramas.
+3. CÁLCULO: Se o usuário usa insulina, calcule a dose sugerida: (Total Carbos / Ratio IC do horário) + Correção se necessário - IOB.
+4. SEGURANÇA: Sempre avise que a contagem por foto é uma estimativa.
+5. CONCISÃO: Seja direto e objetivo nas explicações. Evite textos excessivamente longos que possam cortar.
+6. REGISTRO DE DADOS: OBRIGATÓRIO usar as ferramentas (Function Calling) 'registrar_evento' para salvar refeições, insulinas ou glicemias que NÃO foram capturadas automaticamente.
    - NÃO tente gerar JSON no texto (como GLUCOSE_DATA). ISSO É PROIBIDO.
    - Use APENAS a ferramenta 'registrar_evento'.
 `;
@@ -319,20 +253,10 @@ serve(async (req) => {
 
     const cleanInputPhone = String(number).replace(/\D/g, "");
 
-    // 1. Identificação
-    let { data: users } = await supabase.rpc("get_profile_by_phone", { phone_number: cleanInputPhone });
+    // 1. Identificação do Usuário (usando profileService)
+    const userResult = await findUserProfile(supabase, cleanInputPhone);
 
-    if (!users || users.length === 0) {
-      const { data: allUsers } = await supabase.from("profiles").select("*");
-      if (allUsers) {
-        users = allUsers.filter((u: any) => {
-          const dbPhone = (u.medical_data?.phone || "").replace(/\D/g, "");
-          return dbPhone.endsWith(cleanInputPhone) || cleanInputPhone.endsWith(dbPhone);
-        });
-      }
-    }
-
-    if (!users || users.length === 0) {
+    if (!userResult) {
       return new Response(JSON.stringify({
         number: cleanInputPhone,
         reply_type: "text",
@@ -340,9 +264,7 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const user = users[0];
-    const profile = user.medical_data as UserProfile;
-    const userId = user.id;
+    const { id: userId, profile } = userResult;
 
     // ============================================
     // 🚀 REGEX-FIRST ARCHITECTURE (INTERCEPTOR)
@@ -352,44 +274,8 @@ serve(async (req) => {
     let extractedGlucoseViaRegex = null;
 
     if (!isMedia && message) {
-      // Tentar interceptar com regex robusto
-      const match = extractGlucoseFromText(message);
-
-      if (match) {
-        console.log(`[Regex] Capturada glicemia: ${match.value} ${match.type}`);
-
-        // 🚨 CHECK IDEMPOTÊNCIA: Verificar se já salvou nos últimos 10 minutos
-        // (Evita duplicidade por retries de webhook - aumentado de 2 para 10 min)
-        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        const { data: existingReadings } = await supabase
-          .from('glucose_readings')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('value', match.value)
-          .gte('timestamp', tenMinutesAgo)
-          .limit(1);
-
-        if (existingReadings && existingReadings.length > 0) {
-          console.log('[Regex] Leitura duplicada detectada (Webhook Retry?). Usando existente.');
-          extractedGlucoseViaRegex = match; // Marca como sucesso para gerar feedback
-        } else {
-          // A. Salvar IMEDIATAMENTE no Banco
-          const { error: saveError } = await supabase
-            .from('glucose_readings')
-            .insert({
-              user_id: userId,
-              value: match.value,
-              type: match.type,
-              timestamp: new Date().toISOString()
-            });
-
-          if (!saveError) {
-            extractedGlucoseViaRegex = match; // Flag de sucesso
-          } else {
-            console.error('[Regex] Erro ao salvar:', saveError);
-          }
-        }
-      }
+      // Processar glicemia via glucoseService
+      extractedGlucoseViaRegex = await processGlucoseRegex(supabase, userId, message);
     }
 
     // Se o Regex capturou e salvou, apenas pedir feedback simples para a IA e RETORNAR
@@ -420,14 +306,45 @@ serve(async (req) => {
     // ⬇️ FLUXO NORMAL IA (FALLBACK / MÍDIA)
     // ============================================
 
+    // 🚨 VERIFICAÇÃO ADICIONAL: Evitar processar mídia duplicada
+    // Se houver imagem + texto com glicemia, verificar se já foi registrado
+    if (isMedia && message) {
+      const match = extractGlucoseFromText(message);
+
+      if (match) {
+        console.log(`[Media] Texto acompanha imagem: ${match.value} mg/dL`);
+
+        // Verificar se já foi processado recentemente (mesma proteção do Regex-First)
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const { data: existingReadings } = await supabase
+          .from('glucose_readings')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('value', match.value)
+          .gte('timestamp', tenMinutesAgo)
+          .limit(1);
+
+        if (existingReadings && existingReadings.length > 0) {
+          console.log('[Media] Glicemia já registrada recentemente. Ignorando retry de webhook com imagem.');
+
+          // Retornar resposta padrão sem processar IA
+          return new Response(JSON.stringify({
+            number: cleanInputPhone,
+            reply_type: "text",
+            reply_content: "Registro já processado anteriormente. ✅"
+          }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+    }
+
     // 2. Busca de Dados para Contexto
 
-    // Glicemia
+    // Glicemia - CORRIGIDO: Buscar os 10 MAIS RECENTES (não os mais antigos)
     const { data: readings } = await supabase
       .from("glucose_readings")
       .select("value, timestamp, type")
       .eq("user_id", userId)
-      .order("timestamp", { ascending: true })
+      .order("timestamp", { ascending: false }) // DESCENDENTE = mais recentes primeiro
       .limit(10);
 
     // IOB Calculation
@@ -437,6 +354,15 @@ serve(async (req) => {
     });
 
     const activeInsulin = iobError ? 0 : (iobData || 0);
+
+    // 🔍 DEBUG: Log IOB calculation
+    console.log('=== IOB DEBUG ===');
+    console.log('IOB Data:', iobData);
+    console.log('IOB Error:', iobError);
+    console.log('Active Insulin:', activeInsulin);
+    console.log('User ID:', userId);
+    console.log('DIA:', profile.insulinDuration || 4);
+    console.log('================');
 
     // Histórico de Chat
     const { data: historyData } = await supabase
