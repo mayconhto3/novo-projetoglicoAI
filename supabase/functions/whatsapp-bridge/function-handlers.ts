@@ -3,6 +3,9 @@
  * Processa chamadas de função registrar_evento e consultar_historico
  */
 
+import { registerMeal } from './services/mealService.ts';
+import { validateGlucose, validateInsulin } from './services/validationService.ts';
+
 // ============================================================================
 // HANDLER: REGISTRAR EVENTO
 // ============================================================================
@@ -40,6 +43,13 @@ export async function handleRegistrarEvento(
     try {
         // GLICEMIA
         if (tipo === 'glicemia' && glicemia) {
+            // Validação de segurança
+            const validation = validateGlucose(glicemia.valor);
+            if (!validation.isValid) {
+                console.log(`[Function Call] Glicemia rejeitada: ${validation.error}`);
+                return { success: false, message: validation.error };
+            }
+
             // Idempotency Check
             const isDuplicate = await checkIdempotency('glucose_readings', { value: glicemia.valor });
             if (isDuplicate) {
@@ -67,6 +77,13 @@ export async function handleRegistrarEvento(
 
         // INSULINA
         if (tipo === 'insulina' && insulina) {
+            // Validação de segurança
+            const validation = validateInsulin(insulina.unidades);
+            if (!validation.isValid) {
+                console.log(`[Function Call] Insulina rejeitada: ${validation.error}`);
+                return { success: false, message: validation.error };
+            }
+
             // Idempotency Check
             const isDuplicate = await checkIdempotency('insulin_history', { units: insulina.unidades });
             if (isDuplicate) {
@@ -102,35 +119,25 @@ export async function handleRegistrarEvento(
             return { success: true, message: `Insulina registrada: ${insulina.unidades}u` };
         }
 
-        // REFEIÇÃO
+        // REFEIÇÃO (Refatorada para usar Service)
         if (tipo === 'refeicao' && refeicao) {
-            // Idempotency Check (Check description)
-            const isDuplicate = await checkIdempotency('meal_history', { description: refeicao.descricao });
-            if (isDuplicate) {
-                console.log(`[Function Call] Refeição duplicada ignorada: ${refeicao.descricao}`);
-                return { success: true, message: `Refeição já registrada anteriormente.` };
-            }
+            const mealResult = await registerMeal(supabase, userId, {
+                meal_time: refeicao.horario || inferMealTime(new Date()),
+                description: refeicao.descricao || 'Refeição registrada',
+                image_url: null, // A URL da imagem geralmente vem do contexto global ou é tratada antes
+                carbs: refeicao.carboidratos,
+                calories: refeicao.calorias,
+                insulin_suggested: refeicao.insulina_sugerida,
+                ai_feedback: null // Ou passe o feedback se a IA gerou
+            });
 
-            const { data, error } = await supabase
-                .from('meal_history')
-                .insert({
-                    user_id: userId,
-                    description: refeicao.descricao,
-                    carbs: refeicao.carboidratos || null,
-                    calories: refeicao.calorias || null,
-                    insulin_suggested: refeicao.insulina_sugerida || null,
-                    meal_time: inferMealTime(new Date()), // ✅ CORREÇÃO: meal_time (não meal_label)
-                    created_at: new Date().toISOString(),
-                    favorite: false
-                });
-
-            if (error) {
-                console.error('[Function Call] Erro ao registrar refeição:', error);
-                throw error;
-            }
-
-            console.log(`[Function Call] Refeição registrada: ${refeicao.descricao}`);
-            return { success: true, message: `Refeição registrada: ${refeicao.descricao}` };
+            console.log(`[Function Call] ${mealResult.message}`);
+            return {
+                success: true,
+                message: mealResult.message,
+                updated: mealResult.isUpdate,
+                duplicate: mealResult.isDuplicate
+            };
         }
 
         return { error: 'Tipo de evento inválido ou dados ausentes' };

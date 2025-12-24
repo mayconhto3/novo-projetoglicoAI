@@ -1,6 +1,8 @@
 // Especialista em Processamento de Glicemia
 // Responsabilidade: Extrair, validar e salvar leituras de glicemia
 
+import { validateGlucose } from './validationService.ts';
+
 export interface GlucoseMatch {
     value: number;
     type: string;
@@ -18,7 +20,7 @@ export interface GlucoseMatch {
  * - "Açúcar 103"
  * 
  * Validação:
- * - Valor entre 20-600 mg/dL
+ * - Valor entre 20-600 mg/dL (via validationService)
  * - Inferência de contexto por horário
  * 
  * @param message - Mensagem de texto do usuário
@@ -34,9 +36,10 @@ export function extractGlucoseFromText(message: string): GlucoseMatch | null {
     if (match && match[1]) {
         const value = parseInt(match[1]);
 
-        // Validate range (20-600 mg/dL) - Safety guardrail
-        if (value < 20 || value > 600) {
-            console.warn(`[GlucoseService] Valor fora do range: ${value}`);
+        // Validate via validationService (Safety guardrail)
+        const validation = validateGlucose(value);
+        if (!validation.isValid) {
+            console.warn(`[GlucoseService] ${validation.error}`);
             return null;
         }
 

@@ -4,6 +4,7 @@ import { GEMINI_TOOLS, getPeriodFilter, getTableName } from './gemini-tools.ts';
 import { processFunctionCalls } from './function-handlers.ts';
 import { findUserProfile, UserProfile } from './services/profileService.ts';
 import { processGlucoseRegex, extractGlucoseFromText } from './services/glucoseService.ts';
+import { processMediaInput } from './services/mediaService.ts';
 
 // TIPOS
 declare const Deno: {
@@ -71,7 +72,7 @@ Basal: ${profile.basalInsulin?.brand || "-"} | Bolus: ${profile.bolusInsulin?.br
 
 === ESTADO ATUAL (DADOS DO SISTEMA) ===
 ÚLTIMAS LEITURAS DE GLICEMIA:
-${readings.length > 0 ? readings.slice(-5).map(r => `- ${new Date(r.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}: ${r.value} (${r.type})`).join("\n") : "Sem dados recentes."}
+${readings.length > 0 ? readings.slice(0, 5).map(r => `- ${new Date(r.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}: ${r.value} (${r.type})`).join("\n") : "Sem dados recentes."}
 
 === REGRAS DE CONDUTA ===
 1. IOB (INSULINA ATIVA): Sempre use o valor exato do PERFIL acima. Não calcule manualmente baseado em doses aplicadas.
@@ -385,35 +386,33 @@ serve(async (req) => {
         };
       });
 
-    // 3. Processamento de Mídia e Prompt
+    // 3. TRATAMENTO DE MÍDIA (Delegado ao Service)
+    const processedMedia = await processMediaInput(media_base64, media_url, media_type);
+
     const promptParts: any[] = [];
-    let mimeType = "";
-    let base64Data = "";
 
-    if (media_base64) {
-      base64Data = String(media_base64).replace(/^data:.*,/, "");
-      mimeType = media_type === "audio" ? "audio/ogg" : "image/jpeg";
-    } else if (cleanMediaUrl && !cleanMediaUrl.includes("whatsapp.net")) {
-      try {
-        const mediaRes = await fetch(cleanMediaUrl);
-        if (mediaRes.ok) {
-          const blob = await mediaRes.blob();
-          const buff = await blob.arrayBuffer();
-          base64Data = btoa(String.fromCharCode(...new Uint8Array(buff)));
-          mimeType = blob.type || "image/jpeg";
+    if (processedMedia) {
+      // Injeção limpa de mídia
+      promptParts.push({
+        inlineData: {
+          mimeType: processedMedia.mimeType,
+          data: processedMedia.data
         }
-      } catch (e) {
-        console.error("Erro download media:", e);
-      }
-    }
+      });
 
-    if (base64Data) {
-      promptParts.push({ inlineData: { mimeType, data: base64Data } });
-
-      if (mimeType.startsWith("image")) {
-        promptParts.push({ text: message ? `[FOTO] Contexto: ${message}. Identifique os alimentos, estime carboidratos e sugira insulina.` : `[FOTO DA REFEIÇÃO] Identifique os alimentos, estime os carboidratos totais e verifique se preciso de insulina.` });
-      } else if (mimeType.startsWith("audio")) {
-        promptParts.push({ text: message ? `[ÁUDIO] Contexto: ${message}` : `[ÁUDIO DO USUÁRIO] Transcreva e responda.` });
+      // Contexto para a IA
+      if (processedMedia.mimeType.startsWith("image")) {
+        promptParts.push({
+          text: message
+            ? `[FOTO] Contexto: ${message}. Identifique os alimentos, estime carboidratos e sugira insulina.`
+            : `[FOTO DA REFEIÇÃO] Identifique os alimentos, estime os carboidratos totais e verifique se preciso de insulina.`
+        });
+      } else if (processedMedia.mimeType.startsWith("audio")) {
+        promptParts.push({
+          text: message
+            ? `[ÁUDIO] Contexto: ${message}`
+            : `[ÁUDIO DO USUÁRIO] Transcreva e responda.`
+        });
       }
     } else {
       promptParts.push({ text: message || "Oi" });
@@ -438,9 +437,9 @@ serve(async (req) => {
         {
           user_id: userId,
           role: "user",
-          content: message || (base64Data ? `[Mídia: ${mimeType}]` : "Oi"), // Usar base64Data check pois mediaProcessed removido
-          is_audio: mimeType?.startsWith("audio"),
-          is_image: mimeType?.startsWith("image")
+          content: message || (processedMedia ? `[Mídia: ${processedMedia.mimeType}]` : "Oi"),
+          is_audio: processedMedia?.mimeType.startsWith("audio") || false,
+          is_image: processedMedia?.mimeType.startsWith("image") || false
         },
         {
           user_id: userId,
