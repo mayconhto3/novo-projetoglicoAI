@@ -8,6 +8,48 @@ const N8N_WEBHOOK = Deno.env.get("N8N_OUTBOUND_WEBHOOK_URL")!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ============================================================================
+// HUMANIZAÇÃO ANTI-BLOQUEIO WHATSAPP
+// ============================================================================
+
+/**
+ * Retorna mensagem aleatória de lembrete de almoço
+ * 
+ * Objetivo: Evitar assinatura de SPAM (mensagens idênticas)
+ * WhatsApp detecta bulk messaging quando:
+ * - Mensagens idênticas
+ * - Enviadas no mesmo milissegundo
+ * - Para múltiplos números
+ * 
+ * Spintext resolve o problema de conteúdo idêntico
+ */
+function getLunchMessage(): string {
+    const messages = [
+        "🍽️ Hora do almoço! Não esqueça de mandar a foto do prato.",
+        "Oi! Já almoçou? 🥘 Manda a foto pra gente calcular os carboidratos.",
+        "Bora registrar esse almoço? 🥗 Estou aguardando sua foto!",
+        "Lembrete do nutri: Hora de comer! 🍗 Não esqueça o registro.",
+        "Toc toc! 🥣 O almoço já saiu? Manda foto aí!"
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+}
+
+/**
+ * Retorna mensagem aleatória de lembrete de glicemia
+ * 
+ * Objetivo: Evitar assinatura de SPAM (mensagens idênticas)
+ */
+function getGlucoseMessage(): string {
+    const messages = [
+        "🩸 Faz um tempinho que não vejo sua glicemia. Que tal medir agora?",
+        "Oi! Como está o açúcar no sangue? 🍬 Hora de medir!",
+        "Vamos verificar a glicemia? 💉 É rapidinho e importante.",
+        "Passando para lembrar da medição de glicemia! 📊",
+        "Sua saúde em primeiro lugar! 💙 Já mediu a glicose hoje?"
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+}
+
 /**
  * Retention Scheduler - Sistema de Notificações Inteligentes
  * 
@@ -54,8 +96,16 @@ serve(async (req) => {
 
         const updates: string[] = [];
 
-        // 2. Processa cada usuário
+        // 2. Processa cada usuário (COM HUMANIZAÇÃO)
         for (const user of users) {
+            // 🛡️ SECURITY: Delay aleatório entre 2s e 5s para "humanizar" o envio
+            // Evita disparos simultâneos que geram bloqueio no WhatsApp
+            // Meta detecta bulk spam quando mensagens são enviadas no mesmo milissegundo
+            const delay = Math.floor(Math.random() * 3000) + 2000; // 2000-5000ms
+            await new Promise(resolve => setTimeout(resolve, delay));
+
+            console.log(`[Retention] Processando usuário ${user.id} (delay: ${delay}ms)...`);
+
             // Verifica se tem telefone configurado
             if (!user.medical_data?.phone) {
                 console.log(`[Retention] Usuário ${user.id} sem telefone. Pulando.`);
@@ -140,8 +190,8 @@ async function checkLunch(user: any, updates: string[]) {
         return;
     }
 
-    // Envia notificação
-    const message = "🍽️ Hora do almoço! Não esqueça de mandar a foto do seu prato para eu calcular os carboidratos.";
+    // Envia notificação (com variação de mensagem)
+    const message = getLunchMessage();
     const success = await sendToN8N(user, message);
 
     if (success) {
@@ -187,8 +237,8 @@ async function checkGlucose(user: any, updates: string[]) {
         return;
     }
 
-    // Envia notificação
-    const message = "🩸 Faz um tempinho que não vejo sua glicemia. Que tal medir agora?";
+    // Envia notificação (com variação de mensagem)
+    const message = getGlucoseMessage();
     const success = await sendToN8N(user, message);
 
     if (success) {
