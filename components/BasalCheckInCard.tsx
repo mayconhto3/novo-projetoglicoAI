@@ -11,6 +11,11 @@ interface BasalCheckInCardProps {
 
 export const BasalCheckInCard: React.FC<BasalCheckInCardProps> = ({ user, todaysLogs, onCheckIn }) => {
     const [loading, setLoading] = useState<string | null>(null);
+    // 🔒 OPTIMISTIC UI: Estado local para confirmar sucesso instantaneamente
+    const [localSuccess, setLocalSuccess] = useState<{
+        morning?: { time: string; dose: number; created_at: string };
+        night?: { time: string; dose: number; created_at: string };
+    }>({});
 
     // Se não usa insulina ou não tem basal configurada, não mostra nada
     if (!user.usesInsulin || !user.basalInsulin?.brand) return null;
@@ -18,24 +23,23 @@ export const BasalCheckInCard: React.FC<BasalCheckInCardProps> = ({ user, todays
     const { brand, morningDose, nightDose, morningTime, nightTime } = user.basalInsulin;
 
     // Identificar o que já foi tomado hoje
-    // A lógica assume que se houver um log de "Basal" perto do horário, foi tomado.
-    // Simplificação: Se houver 1 log de basal e só tem 1 dose agendada -> OK.
-    // Se tiver 2 doses agendadas, precisamos saber qual foi.
-    // Vamos usar uma heurística de horário:
-    // Manhã: 04:00 - 15:59
-    // Noite: 16:00 - 03:59
-
-    const morningLog = todaysLogs.find(l => {
+    // Prioridade: localSuccess > todaysLogs (Optimistic UI)
+    const morningLog = localSuccess.morning || todaysLogs.find(l => {
         const hour = new Date(l.created_at).getHours();
         return l.insulin_type === 'Basal' && hour >= 4 && hour < 16;
     });
 
-    const nightLog = todaysLogs.find(l => {
+    const nightLog = localSuccess.night || todaysLogs.find(l => {
         const hour = new Date(l.created_at).getHours();
         return l.insulin_type === 'Basal' && (hour >= 16 || hour < 4);
     });
 
     const handleCheckIn = async (period: 'morning' | 'night', dose: number) => {
+        // 🔒 Prevenir cliques duplicados
+        if (loading || (period === 'morning' && morningLog) || (period === 'night' && nightLog)) {
+            return;
+        }
+
         setLoading(period);
         try {
             const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -46,7 +50,7 @@ export const BasalCheckInCard: React.FC<BasalCheckInCardProps> = ({ user, todays
                 user_id: currentUser.id,
                 units: dose,
                 insulin_type: 'Basal',
-                brand: brand, // Marca da insulina (ex: Basaglar, Lantus)
+                brand: brand,
                 context: period === 'morning' ? 'Basal Manhã' : 'Basal Noite',
                 taken_at: now.toISOString(),
                 created_at: now.toISOString(),
@@ -55,7 +59,18 @@ export const BasalCheckInCard: React.FC<BasalCheckInCardProps> = ({ user, todays
 
             if (error) throw error;
 
-            // Callback para atualizar o Dashboard
+            // ✅ OPTIMISTIC UI: Atualizar estado local IMEDIATAMENTE
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            setLocalSuccess(prev => ({
+                ...prev,
+                [period]: {
+                    time: timeStr,
+                    dose: dose,
+                    created_at: now.toISOString()
+                }
+            }));
+
+            // Callback para atualizar o Dashboard (em background)
             onCheckIn();
         } catch (err) {
             console.error("Erro ao registrar basal:", err);
@@ -107,7 +122,7 @@ export const BasalCheckInCard: React.FC<BasalCheckInCardProps> = ({ user, todays
                                     <Check size={14} /> Tomado
                                 </span>
                                 <span className="text-[10px] text-indigo-200 mt-1">
-                                    {new Date(morningLog.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {localSuccess.morning?.time || new Date(morningLog.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
                         ) : (
@@ -139,7 +154,7 @@ export const BasalCheckInCard: React.FC<BasalCheckInCardProps> = ({ user, todays
                                     <Check size={14} /> Tomado
                                 </span>
                                 <span className="text-[10px] text-purple-200 mt-1">
-                                    {new Date(nightLog.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {localSuccess.night?.time || new Date(nightLog.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
                         ) : (
