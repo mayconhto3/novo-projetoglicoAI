@@ -16,7 +16,9 @@ export interface UserProfile {
     basalInsulin?: {
         brand?: string;
         morningDose?: number;
+        morningTime?: string;
         nightDose?: number;
+        nightTime?: string;
     };
     bolusInsulin?: { brand?: string };
     icRatioBreakfast?: number;

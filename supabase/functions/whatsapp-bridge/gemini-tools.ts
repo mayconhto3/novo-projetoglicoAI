@@ -100,6 +100,22 @@ export const GEMINI_TOOLS = [
             },
             required: ['tipo']
         }
+    },
+    {
+        name: 'register_basal',
+        description: 'Registra que o usuário aplicou sua insulina basal/lenta do dia (ex: Lantus, Tresiba, Basaglar, NPH, Levemir). Use APENAS quando o usuário CONFIRMAR que aplicou a basal. Exemplos: "Tomei a basal", "Apliquei minha lenta", "Já fiz a basal de hoje".',
+        parameters: {
+            type: 'object',
+            properties: {
+                periodo: {
+                    type: 'string',
+                    enum: ['morning', 'night', 'auto'],
+                    default: 'auto',
+                    description: 'Período da dose (manhã ou noite). Use "auto" para detectar automaticamente baseado no horário atual.'
+                }
+            },
+            required: []
+        }
     }
 ];
 

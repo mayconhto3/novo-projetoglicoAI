@@ -18,6 +18,7 @@ import { ProfileCompletionCard } from './ProfileCompletionCard';
 import { PROFILE_TASK_METADATA, calculateCompletionPercentage, isTaskComplete } from '../services/profileTasksConfig';
 import { XPNotification, LevelUpNotification, BadgeUnlockedNotification } from './GamificationNotifications';
 import { useGamification } from '../hooks/useGamification';
+import { BasalCheckInCard } from './BasalCheckInCard';
 import {
     Activity,
     Bot,
@@ -408,6 +409,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                 </header>
 
                 <main className="max-w-lg mx-auto px-6 py-6 space-y-3">
+
+                    {/* 0. Basal Check-in - NOVO (Topo se usar insulina) */}
+                    <BasalCheckInCard
+                        user={user}
+                        todaysLogs={recentInsulin.filter(i => {
+                            const today = new Date();
+                            const logDate = new Date(i.created_at);
+                            return logDate.getDate() === today.getDate() &&
+                                logDate.getMonth() === today.getMonth() &&
+                                logDate.getFullYear() === today.getFullYear();
+                        })}
+                        onCheckIn={async () => {
+                            await fetchChartData();
+                            await onInsulinEntry(); // Award XP
+                        }}
+                    />
 
                     {/* 1. Glucose Card - PRIMEIRO */}
                     <div

@@ -45,11 +45,32 @@ function inferMealTime(timestamp: Date): string {
 const generateSystemPrompt = (
   profile: UserProfile,
   readings: GlucoseReading[],
-  activeInsulin: number
+  activeInsulin: number,
+  basalLogs: any[] = [] // Novos logs de basal
 ) => {
   // Helpers para formatação segura de dados nulos
   const formatIC = (val?: number) => val ? `1:${val}` : "Não informado";
   const formatISF = (val?: number) => val ? `1u reduz ${val}mg/dL` : "Não informado";
+
+  // Formatar Basal Prescrita
+  let basalInfo = "Não usa";
+  if (profile.usesInsulin && profile.basalInsulin?.brand) {
+    const b = profile.basalInsulin;
+    basalInfo = `${b.brand}`;
+    if (b.morningDose) basalInfo += ` | Manhã: ${b.morningDose}u (${b.morningTime || 'N/A'})`;
+    if (b.nightDose) basalInfo += ` | Noite: ${b.nightDose}u (${b.nightTime || 'N/A'})`;
+  }
+
+  // Verificar Status Basal Hoje
+  const today = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const basalTaken = basalLogs.filter(l => {
+    const logDate = new Date(l.created_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    return logDate === today;
+  });
+
+  const basalStatus = basalTaken.length > 0
+    ? `✅ TOMADA HOJE (${basalTaken.map(l => `${l.units}u às ${new Date(l.created_at).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })}`).join(', ')})`
+    : "⚠️ NÃO REGISTRADA HOJE";
 
   return `
 ATUE COMO: GlucoGuide, assistente especialista em diabetes.
@@ -59,7 +80,9 @@ OBJETIVO: Gerenciar glicemia com segurança absoluta.
 Paciente: ${profile.name} (${profile.diabetesType})
 Peso: ${profile.weight}kg | Insulina Ativa (IOB): ${activeInsulin.toFixed(1)}u
 Insulina: ${profile.usesInsulin ? "SIM" : "NÃO"}
-Basal: ${profile.basalInsulin?.brand || "-"} | Bolus: ${profile.bolusInsulin?.brand || "-"}
+Basal (Lenta): ${basalInfo}
+STATUS BASAL HOJE: ${basalStatus}
+Bolus (Rápida): ${profile.bolusInsulin?.brand || "-"}
 
 === PARÂMETROS DE CÁLCULO ===
 * Ratio IC (Carboidrato por Unidade de Insulina):
@@ -76,15 +99,19 @@ ${readings.length > 0 ? readings.slice(0, 5).map(r => `- ${new Date(r.timestamp)
 
 === REGRAS DE CONDUTA ===
 1. IOB (INSULINA ATIVA): Sempre use o valor exato do PERFIL acima. Não calcule manualmente baseado em doses aplicadas.
-2. FOTO DE COMIDA/ÁUDIO: Se receber uma foto ou áudio descrevendo comida, sua tarefa PRIMÁRIA é identificar os alimentos e ESTIMAR OS CARBOIDRATOS TOTAIS em gramas.
-3. CÁLCULO: Se o usuário usa insulina, calcule a dose sugerida: (Total Carbos / Ratio IC do horário) + Correção se necessário - IOB.
-4. SEGURANÇA: Sempre avise que a contagem por foto é uma estimativa.
-5. CONCISÃO: Seja direto e objetivo nas explicações. Evite textos excessivamente longos que possam cortar.
-6. REGISTRO DE DADOS: OBRIGATÓRIO usar as ferramentas (Function Calling) 'registrar_evento' para salvar refeições, insulinas ou glicemias que NÃO foram capturadas automaticamente.
+2. BASAL: Se o usuário perguntar se tomou a basal, consulte o STATUS BASAL HOJE acima. Se não tomou e já passou do horário (ver Perfil), lembre-o gentilmente.
+3. FOTO DE COMIDA/ÁUDIO: Se receber uma foto ou áudio descrevendo comida, sua tarefa PRIMÁRIA é identificar os alimentos e ESTIMAR OS CARBOIDRATOS TOTAIS em gramas.
+4. CÁLCULO: Se o usuário usa insulina, calcule a dose sugerida: (Total Carbos / Ratio IC do horário) + Correção se necessário - IOB.
+5. SEGURANÇA: Sempre avise que a contagem por foto é uma estimativa.
+6. CONCISÃO: Seja direto e objetivo nas explicações. Evite textos excessivamente longos que possam cortar.
+7. REGISTRO DE DADOS: OBRIGATÓRIO usar as ferramentas (Function Calling) 'registrar_evento' para salvar refeições, insulinas ou glicemias que NÃO foram capturadas automaticamente.
    - NÃO tente gerar JSON no texto (como GLUCOSE_DATA). ISSO É PROIBIDO.
    - Use APENAS a ferramenta 'registrar_evento'.
 `;
 };
+
+// ... (rest of the file)
+
 
 // CHAMADA GEMINI COM FUNCTION CALLING
 // ⚠️ FASE 3: Suporta Function Calling com depth limit para evitar loops infinitos
@@ -163,7 +190,8 @@ async function callGemini(
       supabase,
       inferMealTime,
       getPeriodFilter,
-      getTableName
+      getTableName,
+      profile
     );
 
     // Construir resposta com os resultados das funções
@@ -285,7 +313,7 @@ serve(async (req) => {
       const promptFeedback = `O usuário registrou uma glicemia de ${extractedGlucoseViaRegex.value} mg/dL (${extractedGlucoseViaRegex.type}) às ${timeStr}. O dado JÁ FOI SALVO no banco de dados com sucesso. Sua tarefa é APENAS dar um feedback curto, encorajador e confirmar o registro. NÃO tente salvar dnv.`;
 
       // Chamada Text-Only (Sem tools, rápido)
-      const feedback = await callGeminiTextOnly([{ text: promptFeedback }], generateSystemPrompt(profile, [], 0));
+      const feedback = await callGeminiTextOnly([{ text: promptFeedback }], generateSystemPrompt(profile, [], 0, []));
 
       // Retornar Resposta Imediata
       return new Response(JSON.stringify({
@@ -358,11 +386,26 @@ serve(async (req) => {
 
     // 🔍 DEBUG: Log IOB calculation
     console.log('=== IOB DEBUG ===');
-    console.log('IOB Data:', iobData);
-    console.log('IOB Error:', iobError);
     console.log('Active Insulin:', activeInsulin);
-    console.log('User ID:', userId);
-    console.log('DIA:', profile.insulinDuration || 4);
+
+    // BASAL HISTORY CHECK (NOVO)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    // Ajuste fuso horário simples (UTC vs Local - considerando servidor UTC)
+    // Na verdade, created_at é UTC. Então pegamos as últimas 24h ou convertemos range.
+    // Simplificando: pegamos logs das últimas 24h e filtramos no JS com timezone BR.
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: recentInsulinLogs } = await supabase
+      .from("insulin_history")
+      .select("units, insulin_type, created_at")
+      .eq("user_id", userId)
+      .eq("insulin_type", "Basal") // Postgres Case Sensitive? Enum geralmente é Capitalized no DB
+      .gte("created_at", oneDayAgo);
+
+    const basalLogs = recentInsulinLogs || [];
+    console.log(`[Context] Basal logs last 24h: ${basalLogs.length}`);
     console.log('================');
 
     // Histórico de Chat
@@ -419,7 +462,8 @@ serve(async (req) => {
     }
 
     // 4. Geração e Chamada
-    const systemInstruction = generateSystemPrompt(profile, (readings || []) as any[], activeInsulin);
+    // 4. Geração e Chamada
+    const systemInstruction = generateSystemPrompt(profile, (readings || []) as any[], activeInsulin, basalLogs);
 
     const fullPromptParts: any[] = [];
     chatHistory.forEach(h => fullPromptParts.push({ text: `[${h.role}] ${h.parts[0].text}` }));

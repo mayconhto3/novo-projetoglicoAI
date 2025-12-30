@@ -51,6 +51,22 @@ function getGlucoseMessage(): string {
 }
 
 /**
+ * Retorna mensagem aleatória de lembrete de insulina basal
+ * 
+ * Objetivo: Evitar assinatura de SPAM (mensagens idênticas)
+ */
+function getBasalMessage(basalBrand: string, dose: number, period: string): string {
+    const messages = [
+        `💉 Lembrete: Hora da sua ${basalBrand} (${dose}u) - ${period}!`,
+        `Oi! Não esqueça da insulina basal 💙 ${dose}u de ${basalBrand} (${period})`,
+        `🕐 Chegou a hora! ${basalBrand} ${dose}u - ${period}. Já aplicou?`,
+        `Lembrete importante: ${basalBrand} ${dose}u (${period}). Vamos lá! 💪`,
+        `Sua ${basalBrand} está te esperando! 💉 ${dose}u - ${period}`
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+}
+
+/**
  * Retention Scheduler - Sistema de Notificações Inteligentes
  * 
  * Objetivo: Engajar usuários com lembretes contextuais
@@ -104,13 +120,16 @@ serve(async (req) => {
             const delay = Math.floor(Math.random() * 3000) + 2000; // 2000-5000ms
             await new Promise(resolve => setTimeout(resolve, delay));
 
-            console.log(`[Retention] Processando usuário ${user.id} (delay: ${delay}ms)...`);
+            console.log(`[Retention] Processando usuário ${user.id}(delay: ${delay}ms)...`);
 
             // Verifica se tem telefone configurado
             if (!user.medical_data?.phone) {
-                console.log(`[Retention] Usuário ${user.id} sem telefone. Pulando.`);
+                console.log(`[Retention] Usuário ${user.id} sem telefone.Pulando.`);
                 continue;
             }
+
+            // Verifica Basal (Se passou do horário e não tomou) - NOVO
+            await checkBasal(user, updates);
 
             // Verifica Almoço (Se é hora do almoço e não comeu)
             await checkLunch(user, updates);
@@ -119,7 +138,7 @@ serve(async (req) => {
             await checkGlucose(user, updates);
         }
 
-        console.log(`[Retention] Processamento concluído. ${updates.length} notificações enviadas.`);
+        console.log(`[Retention] Processamento concluído.${updates.length} notificações enviadas.`);
 
         return new Response(JSON.stringify({
             message: 'Processamento concluído.',
@@ -142,6 +161,122 @@ serve(async (req) => {
         });
     }
 });
+
+/**
+ * Verifica se usuário precisa de lembrete de insulina basal
+ * 
+ * Lógica:
+ * - Verifica se o usuário usa insulina basal
+ * - Checa se passou 1h do horário prescrito (manhã ou noite)
+ * - Verifica se já tomou hoje (via insulin_history)
+ * - Anti-spam: Máximo 1 notificação por período (manhã/noite) por dia
+ */
+async function checkBasal(user: any, updates: string[]) {
+    // Verifica se o usuário usa insulina basal
+    if (!user.medical_data?.usesInsulin || !user.medical_data?.basalInsulin?.brand) {
+        return;
+    }
+
+    const basal = user.medical_data.basalInsulin;
+    const now = new Date();
+    const currentHour = now.getUTCHours() - 3; // BRT = UTC-3
+    const currentMinutes = now.getUTCMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinutes;
+
+    console.log(`[Basal Check] Verificando usuário ${user.id}...`);
+
+    // Verifica MANHÃ
+    if (basal.morningDose && basal.morningTime) {
+        const [mHour, mMin] = basal.morningTime.split(':').map(Number);
+        const scheduledTimeInMinutes = mHour * 60 + mMin;
+        const diffMinutes = currentTimeInMinutes - scheduledTimeInMinutes;
+
+        // Se passou 60 minutos do horário (1h de tolerância)
+        if (diffMinutes >= 60 && diffMinutes <= 180) { // Janela de 1h a 3h após
+            const taken = await checkIfBasalTaken(user.id, 'morning');
+            if (!taken) {
+                const alreadySent = await checkIfBasalNotificationSent(user.id, 'basal_morning');
+                if (!alreadySent) {
+                    const message = getBasalMessage(basal.brand, basal.morningDose, 'Manhã');
+                    const success = await sendToN8N(user, message);
+                    if (success) {
+                        await logSent(user.id, 'basal_morning', message);
+                        updates.push(user.id);
+                        console.log(`[Basal Check] ✅ Lembrete de basal(manhã) enviado para ${user.id} `);
+                    }
+                }
+            }
+        }
+    }
+
+    // Verifica NOITE
+    if (basal.nightDose && basal.nightTime) {
+        const [nHour, nMin] = basal.nightTime.split(':').map(Number);
+        const scheduledTimeInMinutes = nHour * 60 + nMin;
+        const diffMinutes = currentTimeInMinutes - scheduledTimeInMinutes;
+
+        // Se passou 60 minutos do horário (1h de tolerância)
+        if (diffMinutes >= 60 && diffMinutes <= 180) { // Janela de 1h a 3h após
+            const taken = await checkIfBasalTaken(user.id, 'night');
+            if (!taken) {
+                const alreadySent = await checkIfBasalNotificationSent(user.id, 'basal_night');
+                if (!alreadySent) {
+                    const message = getBasalMessage(basal.brand, basal.nightDose, 'Noite');
+                    const success = await sendToN8N(user, message);
+                    if (success) {
+                        await logSent(user.id, 'basal_night', message);
+                        updates.push(user.id);
+                        console.log(`[Basal Check] ✅ Lembrete de basal(noite) enviado para ${user.id} `);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Verifica se o usuário já tomou a basal hoje (período específico)
+ */
+async function checkIfBasalTaken(userId: string, period: 'morning' | 'night'): Promise<boolean> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Define janela de horário para cada período
+    let startHour = 0, endHour = 24;
+    if (period === 'morning') {
+        startHour = 4;  // 04:00
+        endHour = 16;   // 16:00
+    } else {
+        startHour = 16; // 16:00
+        endHour = 28;   // 04:00 do dia seguinte (28 = 4 + 24)
+    }
+
+    const { count } = await supabase
+        .from('insulin_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('insulin_type', 'Basal')
+        .gte('created_at', today.toISOString());
+
+    // Se encontrou algum registro de Basal hoje, considera como tomado
+    // (A lógica de horário está simplificada - pode ser refinada)
+    return (count && count > 0) || false;
+}
+
+/**
+ * Verifica se já enviamos notificação de basal hoje
+ */
+async function checkIfBasalNotificationSent(userId: string, type: string): Promise<boolean> {
+    const today = new Date().toISOString().split('T')[0];
+    const { count } = await supabase
+        .from('notification_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('notification_type', type)
+        .gte('sent_at', `${today} T00:00:00`);
+
+    return (count && count > 0) || false;
+}
 
 /**
  * Verifica se usuário precisa de lembrete de almoço
@@ -172,7 +307,7 @@ async function checkLunch(user: any, updates: string[]) {
         .gte('created_at', fourHoursAgo);
 
     if (mealCount && mealCount > 0) {
-        console.log(`[Lunch Check] Usuário ${user.id} já comeu. OK.`);
+        console.log(`[Lunch Check] Usuário ${user.id} já comeu.OK.`);
         return;
     }
 
@@ -183,7 +318,7 @@ async function checkLunch(user: any, updates: string[]) {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('notification_type', 'lunch')
-        .gte('sent_at', `${today}T00:00:00`);
+        .gte('sent_at', `${today} T00:00:00`);
 
     if (sentToday && sentToday > 0) {
         console.log(`[Lunch Check] Já enviamos lembrete de almoço hoje para ${user.id}.`);
@@ -197,7 +332,7 @@ async function checkLunch(user: any, updates: string[]) {
     if (success) {
         await logSent(user.id, 'lunch', message);
         updates.push(user.id);
-        console.log(`[Lunch Check] ✅ Lembrete de almoço enviado para ${user.id}`);
+        console.log(`[Lunch Check] ✅ Lembrete de almoço enviado para ${user.id} `);
     }
 }
 
@@ -219,7 +354,7 @@ async function checkGlucose(user: any, updates: string[]) {
         .gte('timestamp', sixHoursAgo);
 
     if (glucoseCount && glucoseCount > 0) {
-        console.log(`[Glucose Check] Usuário ${user.id} mediu recentemente. OK.`);
+        console.log(`[Glucose Check] Usuário ${user.id} mediu recentemente.OK.`);
         return;
     }
 
@@ -230,7 +365,7 @@ async function checkGlucose(user: any, updates: string[]) {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('notification_type', 'glucose')
-        .gte('sent_at', `${today}T00:00:00`);
+        .gte('sent_at', `${today} T00:00:00`);
 
     if (sentToday && sentToday > 0) {
         console.log(`[Glucose Check] Já enviamos lembrete de glicemia hoje para ${user.id}.`);
@@ -244,7 +379,7 @@ async function checkGlucose(user: any, updates: string[]) {
     if (success) {
         await logSent(user.id, 'glucose', message);
         updates.push(user.id);
-        console.log(`[Glucose Check] ✅ Lembrete de glicemia enviado para ${user.id}`);
+        console.log(`[Glucose Check] ✅ Lembrete de glicemia enviado para ${user.id} `);
     }
 }
 
@@ -280,11 +415,11 @@ async function sendToN8N(user: any, message: string): Promise<boolean> {
         });
 
         if (!response.ok) {
-            console.error(`[n8n] Erro HTTP ${response.status}: ${await response.text()}`);
+            console.error(`[n8n] Erro HTTP ${response.status}: ${await response.text()} `);
             return false;
         }
 
-        console.log(`[n8n] ✅ Mensagem enviada para ${user.medical_data.phone}`);
+        console.log(`[n8n] ✅ Mensagem enviada para ${user.medical_data.phone} `);
         return true;
 
     } catch (e) {

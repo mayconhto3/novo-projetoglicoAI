@@ -244,7 +244,8 @@ export async function processFunctionCalls(
     supabase: any,
     inferMealTime: (date: Date) => string,
     getPeriodFilter: (periodo: string) => Date,
-    getTableName: (tipo: string) => string
+    getTableName: (tipo: string) => string,
+    profile: any
 ): Promise<any[]> {
     const results = [];
 
@@ -272,6 +273,10 @@ export async function processFunctionCalls(
                 return await handleConsultarHistorico(args, userId, supabase, getPeriodFilter, getTableName);
             }
 
+            if (name === 'register_basal') {
+                return await handleRegisterBasal(args, userId, supabase, profile);
+            }
+
             return { error: `Função desconhecida: ${name}` };
 
         } catch (error: any) {
@@ -293,3 +298,121 @@ export async function processFunctionCalls(
 
     return results;
 }
+
+// ============================================================================
+// HANDLER: REGISTER BASAL (NOVA TOOL)
+// ============================================================================
+
+/**
+ * Processa chamada da função register_basal
+ * Registra a aplicação de insulina basal do usuário
+ */
+export async function handleRegisterBasal(
+    args: any,
+    userId: string,
+    supabase: any,
+    profile: any
+): Promise<any> {
+    const { periodo = 'auto' } = args;
+
+    try {
+        // Verificar se o usuário tem basal configurada
+        if (!profile.usesInsulin || !profile.basalInsulin?.brand) {
+            return {
+                success: false,
+                message: 'Você não tem insulina basal configurada no seu perfil.'
+            };
+        }
+
+        const basal = profile.basalInsulin;
+        const now = new Date();
+        const currentHour = now.getHours();
+
+        // Determinar período automaticamente se necessário
+        let finalPeriod = periodo;
+        if (periodo === 'auto') {
+            // Manhã: 04:00 - 15:59, Noite: 16:00 - 03:59
+            finalPeriod = (currentHour >= 4 && currentHour < 16) ? 'morning' : 'night';
+        }
+
+        // Selecionar dose e horário baseado no período
+        let dose: number;
+        let scheduledTime: string;
+        let context: string;
+
+        if (finalPeriod === 'morning') {
+            if (!basal.morningDose) {
+                return {
+                    success: false,
+                    message: 'Você não tem dose de basal da manhã configurada.'
+                };
+            }
+            dose = basal.morningDose;
+            scheduledTime = basal.morningTime || 'N/A';
+            context = 'Basal Manhã';
+        } else {
+            if (!basal.nightDose) {
+                return {
+                    success: false,
+                    message: 'Você não tem dose de basal da noite configurada.'
+                };
+            }
+            dose = basal.nightDose;
+            scheduledTime = basal.nightTime || 'N/A';
+            context = 'Basal Noite';
+        }
+
+        // Verificar se já tomou hoje (idempotência)
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const { data: existingLog } = await supabase
+            .from('insulin_history')
+            .select('id, created_at')
+            .eq('user_id', userId)
+            .eq('insulin_type', 'Basal')
+            .eq('context', context)
+            .gte('created_at', todayStart.toISOString())
+            .limit(1);
+
+        if (existingLog && existingLog.length > 0) {
+            const logTime = new Date(existingLog[0].created_at).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            return {
+                success: false,
+                message: `Você já registrou sua basal ${finalPeriod === 'morning' ? 'da manhã' : 'da noite'} hoje às ${logTime}.`
+            };
+        }
+
+        // Inserir no banco
+        const { error } = await supabase.from('insulin_history').insert({
+            user_id: userId,
+            units: dose,
+            insulin_type: 'Basal',
+            brand: basal.brand,
+            context: context,
+            taken_at: now.toISOString(),
+            created_at: now.toISOString(),
+            note: 'Registrado via WhatsApp (IA)'
+        });
+
+        if (error) throw error;
+
+        // Retornar confirmação
+        const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        return {
+            success: true,
+            message: `✅ Registrado! ${dose}u de ${basal.brand} (${context}) às ${timeStr}.`
+        };
+
+    } catch (error: any) {
+        console.error('[Register Basal] Erro:', error);
+        return {
+            success: false,
+            message: 'Erro ao registrar basal. Tente novamente.'
+        };
+    }
+}
+
