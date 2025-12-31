@@ -89,6 +89,8 @@ export interface UserProfile {
   // SEÇÃO 3: TRATAMENTO COM INSULINA
   usesInsulin: boolean;
   insulinDuration?: number; // Duração da ação (DIA) em horas (ex: 3, 4, 5)
+  insulinMethod?: 'Caneta' | 'Seringa' | 'Bomba'; // OS-08: Método de aplicação
+  insulinStep?: 1.0 | 0.5; // OS-08: Precisão da dose (1u padrão, 0.5u pediátrico)
   basalInsulin?: {
     uses: boolean;
     brand?: string;

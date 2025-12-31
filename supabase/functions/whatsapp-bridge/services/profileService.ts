@@ -13,6 +13,8 @@ export interface UserProfile {
     hba1c?: number;
     usesInsulin: boolean;
     insulinDuration?: number;
+    insulinMethod?: 'Caneta' | 'Seringa' | 'Bomba'; // OS-09: Método de aplicação
+    insulinStep?: 1.0 | 0.5; // OS-09: Precisão da dose
     basalInsulin?: {
         brand?: string;
         morningDose?: number;

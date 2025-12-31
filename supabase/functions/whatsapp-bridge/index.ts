@@ -93,6 +93,38 @@ Bolus (Rápida): ${profile.bolusInsulin?.brand || "-"}
 * Fator Sensibilidade (ISF): ${formatISF(profile.isfMorning)}
 * Metas: ${profile.targetGlucosePreMeal}-${profile.targetGlucosePostMeal} mg/dL
 
+=== ⚠️ PRECISÃO DE INSULINA (OS-09 - CRÍTICO) ===
+* Método de Aplicação: ${profile.insulinMethod || 'Caneta'}
+* Precisão da Dose: ${profile.insulinStep || 1.0}u
+
+🔴 REGRAS DE ARREDONDAMENTO (SEGURANÇA MÉDICA):
+${profile.insulinStep === 0.5 ? `
+✅ PRECISÃO 0.5u (Pediátrico/Sensível):
+   - Arredonde SEMPRE para o múltiplo de 0.5u mais próximo
+   - Exemplos: 3.2u → 3.0u | 3.3u → 3.5u | 3.7u → 3.5u | 3.8u → 4.0u
+   - Fórmula: Math.round(dose * 2) / 2
+   - NUNCA sugira doses como 3.2u, 3.4u, 3.6u, 3.8u
+` : `
+✅ PRECISÃO 1.0u (Padrão):
+   - Arredonde SEMPRE para o inteiro mais próximo
+   - Exemplos: 3.2u → 3u | 3.4u → 3u | 3.5u → 4u | 3.6u → 4u
+   - Fórmula: Math.round(dose)
+   - NUNCA sugira doses decimais (3.5u, 3.2u, etc)
+`}
+📝 FORMATO DA RESPOSTA:
+   Quando calcular uma dose, SEMPRE explique o arredondamento:
+   
+   "Cálculo: [X]g de carboidratos ÷ [ratio] = [dose_calculada]u
+   
+   ⚙️ Ajuste para sua ${profile.insulinMethod || 'caneta'} (precisão ${profile.insulinStep || 1.0}u):
+   Dose sugerida: [dose_arredondada]u"
+   
+   Exemplo real:
+   "Cálculo: 54g ÷ 10 = 5.4u
+   
+   ⚙️ Ajuste para sua caneta (precisão 1.0u):
+   Dose sugerida: 5u (arredondado de 5.4u)"
+
 === ESTADO ATUAL (DADOS DO SISTEMA) ===
 ÚLTIMAS LEITURAS DE GLICEMIA:
 ${readings.length > 0 ? readings.slice(0, 5).map(r => `- ${new Date(r.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}: ${r.value} (${r.type})`).join("\n") : "Sem dados recentes."}
@@ -102,9 +134,10 @@ ${readings.length > 0 ? readings.slice(0, 5).map(r => `- ${new Date(r.timestamp)
 2. BASAL: Se o usuário perguntar se tomou a basal, consulte o STATUS BASAL HOJE acima. Se não tomou e já passou do horário (ver Perfil), lembre-o gentilmente.
 3. FOTO DE COMIDA/ÁUDIO: Se receber uma foto ou áudio descrevendo comida, sua tarefa PRIMÁRIA é identificar os alimentos e ESTIMAR OS CARBOIDRATOS TOTAIS em gramas.
 4. CÁLCULO: Se o usuário usa insulina, calcule a dose sugerida: (Total Carbos / Ratio IC do horário) + Correção se necessário - IOB.
-5. SEGURANÇA: Sempre avise que a contagem por foto é uma estimativa.
-6. CONCISÃO: Seja direto e objetivo nas explicações. Evite textos excessivamente longos que possam cortar.
-7. REGISTRO DE DADOS: OBRIGATÓRIO usar as ferramentas (Function Calling) 'registrar_evento' para salvar refeições, insulinas ou glicemias que NÃO foram capturadas automaticamente.
+5. 🔴 ARREDONDAMENTO: SEMPRE arredonde a dose final conforme as REGRAS DE ARREDONDAMENTO acima. NUNCA sugira doses que o paciente não consegue aplicar.
+6. SEGURANÇA: Sempre avise que a contagem por foto é uma estimativa.
+7. CONCISÃO: Seja direto e objetivo nas explicações. Evite textos excessivamente longos que possam cortar.
+8. REGISTRO DE DADOS: OBRIGATÓRIO usar as ferramentas (Function Calling) 'registrar_evento' para salvar refeições, insulinas ou glicemias que NÃO foram capturadas automaticamente.
    - NÃO tente gerar JSON no texto (como GLUCOSE_DATA). ISSO É PROIBIDO.
    - Use APENAS a ferramenta 'registrar_evento'.
 `;
@@ -120,7 +153,8 @@ async function callGemini(
   systemInstruction: string,
   userId?: string,
   supabase?: any,
-  depth: number = 0
+  depth: number = 0,
+  profile?: UserProfile
 ): Promise<string> {
   const apiKey = Deno.env.get("API_KEY");
   if (!apiKey) throw new Error("API_KEY do Gemini não configurada.");
@@ -209,7 +243,7 @@ async function callGemini(
     ];
 
     // Recursão com depth incrementado
-    return await callGemini(newPromptParts, systemInstruction, userId, supabase, depth + 1);
+    return await callGemini(newPromptParts, systemInstruction, userId, supabase, depth + 1, profile);
   }
 
   // Se não houver function calls, retornar texto normal
@@ -470,7 +504,7 @@ serve(async (req) => {
     promptParts.forEach(p => fullPromptParts.push(p));
 
     // ✅ FASE 3: Chamada com Tools (Function Calling)
-    const replyText = await callGemini(fullPromptParts, systemInstruction, userId, supabase);
+    const replyText = await callGemini(fullPromptParts, systemInstruction, userId, supabase, 0, profile);
 
     // 6. Salvamento (CORRIGIDO)
     // Mantemos APENAS o histórico do chat. 
