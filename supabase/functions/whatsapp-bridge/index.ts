@@ -303,17 +303,30 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    // Parse request body
+    // ============================================
+    // 📡 NORMALIZAÇÃO DE PAYLOAD (POLIGLOTA)
+    // ============================================
+    // Suporta múltiplos formatos de webhook:
+    // - Evolution API: { from, message, ... }
+    // - n8n: { from, message, ... }
+    // - Postman/Custom: { number, message, ... }
+
     const body = await req.json();
+
+    // Normalizar número do telefone (aceita 'from', 'number' ou 'phone')
+    const from = body.from || body.number || body.phone;
+
+    // Extrair outros campos
     const {
-      from,
       message,
       media_url,
       media_base64,
       mime_type
     } = body;
 
-    if (!from) throw new Error('Número obrigatório.');
+    if (!from) {
+      throw new Error('Número do telefone obrigatório (from, number ou phone).');
+    }
 
     let cleanMediaUrl = typeof media_url === "string" ? media_url.trim() : "";
     if (cleanMediaUrl.startsWith("=")) cleanMediaUrl = cleanMediaUrl.slice(1);
