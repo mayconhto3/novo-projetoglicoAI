@@ -5,6 +5,7 @@ import { processFunctionCalls } from './function-handlers.ts';
 import { findUserProfile, UserProfile } from './services/profileService.ts';
 import { processGlucoseRegex, extractGlucoseFromText } from './services/glucoseService.ts';
 import { processMediaInput } from './services/mediaService.ts';
+import { checkGatekeeper, detectMessageType } from './services/gatekeeperService.ts';
 
 // TIPOS
 declare const Deno: {
@@ -302,9 +303,17 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { number, message, media_url, media_base64, media_type } = await req.json();
+    // Parse request body
+    const body = await req.json();
+    const {
+      from,
+      message,
+      media_url,
+      media_base64,
+      mime_type
+    } = body;
 
-    if (!number) throw new Error('Número obrigatório.');
+    if (!from) throw new Error('Número obrigatório.');
 
     let cleanMediaUrl = typeof media_url === "string" ? media_url.trim() : "";
     if (cleanMediaUrl.startsWith("=")) cleanMediaUrl = cleanMediaUrl.slice(1);
@@ -314,7 +323,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const cleanInputPhone = String(number).replace(/\D/g, "");
+    const cleanInputPhone = String(from).replace(/\D/g, "");
 
     // 1. Identificação do Usuário (usando profileService)
     const userResult = await findUserProfile(supabase, cleanInputPhone);
@@ -328,6 +337,46 @@ serve(async (req) => {
     }
 
     const { id: userId, profile } = userResult;
+
+    // ============================================
+    // 🔒 OS-11: GATEKEEPER (INTERCEPTOR DE ACESSO)
+    // ============================================
+    // Detectar tipo de mensagem (text, image, audio)
+    const messageType = detectMessageType(body);
+    console.log(`[Gatekeeper] Tipo de mensagem detectado: ${messageType}`);
+
+    // Verificar se usuário pode enviar mensagem
+    const gatekeeperResult = await checkGatekeeper(profile, messageType, supabase);
+
+    if (!gatekeeperResult.allowed) {
+      console.log(`[Gatekeeper] Acesso bloqueado: ${gatekeeperResult.reason}`);
+
+      // Enviar mensagem de bloqueio via webhook
+      const webhookUrl = Deno.env.get("N8N_OUTBOUND_WEBHOOK_URL");
+      if (webhookUrl && gatekeeperResult.message) {
+        try {
+          await fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: from,
+              text: gatekeeperResult.message
+            })
+          });
+          console.log('[Gatekeeper] Mensagem de bloqueio enviada');
+        } catch (err) {
+          console.error('[Gatekeeper] Erro ao enviar mensagem de bloqueio:', err);
+        }
+      }
+
+      // Retornar sucesso (webhook já foi processado)
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    console.log(`[Gatekeeper] ✅ Acesso liberado (${profile.subscription_status || 'trial'})`);
+
 
     // ============================================
     // 🚀 REGEX-FIRST ARCHITECTURE (INTERCEPTOR)
@@ -464,7 +513,7 @@ serve(async (req) => {
       });
 
     // 3. TRATAMENTO DE MÍDIA (Delegado ao Service)
-    const processedMedia = await processMediaInput(media_base64, media_url, media_type);
+    const processedMedia = await processMediaInput(media_base64, media_url, mime_type);
 
     const promptParts: any[] = [];
 

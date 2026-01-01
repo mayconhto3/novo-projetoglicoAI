@@ -2,6 +2,7 @@
 // Responsabilidade: Buscar e validar perfil do usuário
 
 export interface UserProfile {
+    id?: string; // User ID (opcional para compatibilidade)
     name: string;
     birthDate: string;
     gender: string;
@@ -43,6 +44,17 @@ export interface UserProfile {
     medicationsAffectingGlucose?: string[];
     communicationStyle: string;
     caregiver?: { active: boolean; name: string };
+
+    // OS-11: Gatekeeper & Subscription
+    subscription_status?: 'trial' | 'active' | 'expired' | 'cancelled';
+    trial_ends_at?: string;
+    stripe_customer_id?: string;
+    usage_stats?: {
+        text: number;
+        image: number;
+        audio: number;
+        last_date: string | null;
+    };
 }
 
 export interface UserProfileResult {
