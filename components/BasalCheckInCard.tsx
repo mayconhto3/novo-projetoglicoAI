@@ -34,7 +34,11 @@ export const BasalCheckInCard: React.FC<BasalCheckInCardProps> = ({ user, todays
         return l.insulin_type === 'Basal' && (hour >= 16 || hour < 4);
     });
 
-    const handleCheckIn = async (period: 'morning' | 'night', dose: number) => {
+    const handleCheckIn = async (e: React.MouseEvent, period: 'morning' | 'night', dose: number) => {
+        // 🔒 UX FIX: Prevenir page reload e event bubbling
+        e.preventDefault();
+        e.stopPropagation();
+
         // 🔒 Prevenir cliques duplicados
         if (loading || (period === 'morning' && morningLog) || (period === 'night' && nightLog)) {
             return;
@@ -127,7 +131,7 @@ export const BasalCheckInCard: React.FC<BasalCheckInCardProps> = ({ user, todays
                             </div>
                         ) : (
                             <button
-                                onClick={() => handleCheckIn('morning', morningDose)}
+                                onClick={(e) => handleCheckIn(e, 'morning', morningDose)}
                                 disabled={!!loading}
                                 className="bg-white text-indigo-600 px-4 py-2 rounded-xl font-bold text-sm shadow-sm hover:bg-indigo-50 active:scale-95 transition-all flex items-center gap-2"
                             >
@@ -159,7 +163,7 @@ export const BasalCheckInCard: React.FC<BasalCheckInCardProps> = ({ user, todays
                             </div>
                         ) : (
                             <button
-                                onClick={() => handleCheckIn('night', nightDose)}
+                                onClick={(e) => handleCheckIn(e, 'night', nightDose)}
                                 disabled={!!loading}
                                 className="bg-white text-purple-600 px-4 py-2 rounded-xl font-bold text-sm shadow-sm hover:bg-purple-50 active:scale-95 transition-all flex items-center gap-2"
                             >
