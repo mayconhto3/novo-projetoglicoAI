@@ -6,6 +6,7 @@ import { findUserProfile, UserProfile } from './services/profileService.ts';
 import { processGlucoseRegex, extractGlucoseFromText } from './services/glucoseService.ts';
 import { processMediaInput } from './services/mediaService.ts';
 import { checkGatekeeper, detectMessageType } from './services/gatekeeperService.ts';
+import { createCheckoutSession } from './services/paymentService.ts';
 
 // TIPOS
 declare const Deno: {
@@ -361,29 +362,79 @@ serve(async (req) => {
     // Verificar se usuário pode enviar mensagem
     const gatekeeperResult = await checkGatekeeper(profile, messageType, supabase);
 
+    // ============================================
+    // 🔒 OS-11/12: GATEKEEPER & PAGAMENTO
+    // ============================================
     if (!gatekeeperResult.allowed) {
       console.log(`[Gatekeeper] Acesso bloqueado: ${gatekeeperResult.reason}`);
 
-      // Enviar mensagem de bloqueio via webhook
+      // ============================================================================
+      // 1. GERAR LINK DE PAGAMENTO DINÂMICO (OS-12)
+      // ============================================================================
+
+      let paymentLink = "https://glucoai.com/premium"; // Fallback
+
+      try {
+        const priceId = Deno.env.get("STRIPE_PRICE_ID");
+
+        if (priceId) {
+          console.log('[Payment] Gerando link de checkout...');
+          const sessionUrl = await createCheckoutSession(
+            supabase,
+            userId,
+            cleanInputPhone,
+            priceId
+          );
+
+          if (sessionUrl) {
+            paymentLink = sessionUrl;
+            console.log('[Payment] Link gerado com sucesso');
+          }
+        } else {
+          console.warn('[Payment] ⚠️ STRIPE_PRICE_ID não configurado nos Secrets!');
+        }
+      } catch (err) {
+        console.error('[Payment] Erro ao gerar link:', err);
+      }
+
+      // ============================================================================
+      // 2. MONTAR MENSAGEM FINAL COM LINK
+      // ============================================================================
+
+      const finalMessage = `${gatekeeperResult.message}\n\n💳 *Assine Agora e Libere na Hora:*\n${paymentLink}`;
+
+      // ============================================================================
+      // 3. ENVIAR VIA WEBHOOK (n8n/Evolution)
+      // ============================================================================
+
       const webhookUrl = Deno.env.get("N8N_OUTBOUND_WEBHOOK_URL");
-      if (webhookUrl && gatekeeperResult.message) {
+      if (webhookUrl) {
         try {
           await fetch(webhookUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               to: from,
-              text: gatekeeperResult.message
+              text: finalMessage
             })
           });
-          console.log('[Gatekeeper] Mensagem de bloqueio enviada');
+          console.log('[Gatekeeper] Mensagem de bloqueio enviada com link de pagamento');
         } catch (err) {
-          console.error('[Gatekeeper] Erro ao enviar mensagem de bloqueio:', err);
+          console.error('[Gatekeeper] Erro ao enviar webhook:', err);
         }
       }
 
-      // Retornar sucesso (webhook já foi processado)
-      return new Response(JSON.stringify({ success: true }), {
+      // ============================================================================
+      // 4. RETORNAR (Early Return)
+      // ============================================================================
+
+      return new Response(JSON.stringify({
+        success: true,
+        action: 'blocked',
+        reason: gatekeeperResult.reason,
+        message: finalMessage,
+        payment_link: paymentLink
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }

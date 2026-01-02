@@ -46,7 +46,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                 email: data.email || authUser.email || '',
                 phone: data.phone || '',
                 weight: data.weight || data.medical_data?.weight || 0,
-                height: data.height || data.medical_data?.height || 0,
+                height: data.medical_data?.height || 0,
                 targetGlucosePreMeal: data.target_glucose_min || data.medical_data?.targetGlucosePreMeal || 90,
                 targetGlucosePostMeal: data.target_glucose_max || data.medical_data?.targetGlucosePostMeal || 180,
                 notificationSettings: data.notification_settings || {
@@ -650,8 +650,8 @@ const RadioGroup: React.FC<RadioGroupProps> = ({ label, options, value, onChange
                     key={option.value}
                     onClick={() => onChange(option.value)}
                     className={`p-3 rounded-xl font-medium transition-all ${value === option.value
-                            ? 'bg-[#56da98] text-white shadow-lg scale-105'
-                            : 'bg-white/10 text-white hover:bg-white/20'
+                        ? 'bg-[#56da98] text-white shadow-lg scale-105'
+                        : 'bg-white/10 text-white hover:bg-white/20'
                         }`}
                 >
                     {option.icon && <div className="text-2xl mb-1">{option.icon}</div>}
@@ -675,8 +675,8 @@ const StepSelector: React.FC<StepSelectorProps> = ({ label, value, onChange }) =
             <button
                 onClick={() => onChange(1.0)}
                 className={`p-3 rounded-xl font-medium transition-all ${value === 1.0
-                        ? 'bg-[#56da98] text-white shadow-lg scale-105'
-                        : 'bg-white/10 text-white hover:bg-white/20'
+                    ? 'bg-[#56da98] text-white shadow-lg scale-105'
+                    : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
             >
                 <div className="text-lg font-bold">1u</div>
@@ -685,8 +685,8 @@ const StepSelector: React.FC<StepSelectorProps> = ({ label, value, onChange }) =
             <button
                 onClick={() => onChange(0.5)}
                 className={`p-3 rounded-xl font-medium transition-all ${value === 0.5
-                        ? 'bg-[#56da98] text-white shadow-lg scale-105'
-                        : 'bg-white/10 text-white hover:bg-white/20'
+                    ? 'bg-[#56da98] text-white shadow-lg scale-105'
+                    : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
             >
                 <div className="text-lg font-bold">0.5u</div>
