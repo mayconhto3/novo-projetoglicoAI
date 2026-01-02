@@ -86,6 +86,13 @@ export async function createCheckoutSession(
         // 3. CRIAR SESSÃO DE CHECKOUT
         // ============================================================================
 
+        // Preparar URLs de retorno com encoding correto
+        const returnPhone = userPhone.replace(/\D/g, '');
+
+        // BUGFIX: Codificar textos para URL (remove espaços e acentos)
+        const msgSuccess = encodeURIComponent('✅ Pagamento realizado! Meu acesso já está liberado?');
+        const msgCancel = encodeURIComponent('❌ Tive problema no pagamento. Pode me ajudar?');
+
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
             line_items: [
@@ -96,9 +103,9 @@ export async function createCheckoutSession(
             ],
             mode: 'subscription',
 
-            // URLs de retorno (WhatsApp)
-            success_url: `https://wa.me/${userPhone.replace(/\D/g, '')}?text=✅%20Pagamento%20realizado!%20Meu%20acesso%20já%20está%20liberado?`,
-            cancel_url: `https://wa.me/${userPhone.replace(/\D/g, '')}?text=❌%20Tive%20problema%20no%20pagamento.%20Pode%20me%20ajudar?`,
+            // URLs de retorno (WhatsApp) com encoding correto
+            success_url: `https://wa.me/${returnPhone}?text=${msgSuccess}`,
+            cancel_url: `https://wa.me/${returnPhone}?text=${msgCancel}`,
 
             // Metadata para webhook identificar
             metadata: {
