@@ -99,6 +99,18 @@ export async function checkGatekeeper(
 ): Promise<GatekeeperResult> {
     const today = new Date().toISOString().split('T')[0];
 
+    // ============================================================================
+    // 🕵️ DEBUG LOGS (Tech Lead Request)
+    // ============================================================================
+    console.log(`[Gatekeeper DEBUG] ========== INÍCIO DA VERIFICAÇÃO ==========`);
+    console.log(`[Gatekeeper DEBUG] User ID: ${profile.id || 'UNDEFINED'}`);
+    console.log(`[Gatekeeper DEBUG] Status no Banco: "${profile.subscription_status}" (tipo: ${typeof profile.subscription_status})`);
+    console.log(`[Gatekeeper DEBUG] Vencimento: ${profile.trial_ends_at || 'UNDEFINED'}`);
+    console.log(`[Gatekeeper DEBUG] Hoje (ISO): ${new Date().toISOString()}`);
+    console.log(`[Gatekeeper DEBUG] Hoje (Date): ${today}`);
+    console.log(`[Gatekeeper DEBUG] Usage Stats: ${JSON.stringify(profile.usage_stats)}`);
+    console.log(`[Gatekeeper DEBUG] ================================================`);
+
     // Inicializar stats com valores padrão se não existir
     let stats: UsageStats = profile.usage_stats || {
         text: 0,

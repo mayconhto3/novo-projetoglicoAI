@@ -108,8 +108,33 @@ export async function findUserProfile(
 
     console.log(`[ProfileService] Usuário encontrado: ${users[0].id}`);
 
+    // ============================================================================
+    // CRITICAL FIX: Merge medical_data with OS-11 direct columns
+    // ============================================================================
+    // OS-11 columns are DIRECT in profiles table, not in medical_data JSONB:
+    // - subscription_status
+    // - trial_ends_at
+    // - stripe_customer_id
+    // - usage_stats
+
+    const profileData: UserProfile = {
+        ...(users[0].medical_data || {}),  // Spread medical_data first
+        id: users[0].id,                    // Override with direct columns
+        subscription_status: users[0].subscription_status,
+        trial_ends_at: users[0].trial_ends_at,
+        stripe_customer_id: users[0].stripe_customer_id,
+        usage_stats: users[0].usage_stats
+    };
+
+    console.log(`[ProfileService] Profile montado com OS-11 fields:`, {
+        id: profileData.id,
+        subscription_status: profileData.subscription_status,
+        trial_ends_at: profileData.trial_ends_at,
+        has_usage_stats: !!profileData.usage_stats
+    });
+
     return {
         id: users[0].id,
-        profile: users[0].medical_data as UserProfile,
+        profile: profileData,
     };
 }
