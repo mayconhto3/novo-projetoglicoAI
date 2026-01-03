@@ -31,12 +31,31 @@ export interface UserProfile {
     isfMorning?: number;
     targetGlucosePreMeal: number;
     targetGlucosePostMeal: number;
+
+    // OS-18: Dados do questionário para contexto da IA
+    mealTimes?: {
+        breakfast?: string;
+        lunch?: string;
+        dinner?: string;
+    };
+    hypoHistory?: 'never' | 'rare' | 'sometimes' | 'frequent';
+    hyperHistory?: 'never' | 'rare' | 'sometimes' | 'frequent';
+    hypoSymptoms?: string[];
+    diabetesMeds?: string[];
+    glycemicMeds?: string[];
+    diet?: string;
+    problematicFoods?: string[];
+    countCarbs?: 'always' | 'sometimes' | 'never';
+    exercise?: string;
+    smoking?: string;
+    alcohol?: string;
+    sleepQuality?: string;
+
+    // Campos legados (manter compatibilidade)
     hypoglycemiaFrequency?: string;
     hypoglycemiaSymptoms?: string[];
     comorbidities?: string[];
     dietType?: string[];
-    problematicFoods?: string[];
-    carbCountingKnowledge?: string;
     exerciseFrequency: string;
     exerciseType?: string[];
     smoker: string;
@@ -137,4 +156,125 @@ export async function findUserProfile(
         id: users[0].id,
         profile: profileData,
     };
+}
+
+// ============================================================================
+// OS-18: AI CONTEXT ENRICHMENT HELPERS
+// ============================================================================
+
+/**
+ * Calcula idade a partir da data de nascimento
+ */
+export function calculateAge(birthDate: string): number {
+    const birth = new Date(birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+}
+
+/**
+ * Constrói contexto clínico compactado para a IA
+ * OS-18: Injeta dados do questionário que estavam sendo ignorados
+ */
+export function buildClinicalContext(profile: UserProfile): string {
+    const sections: string[] = [];
+
+    // 🚨 SEGURANÇA CRÍTICA
+    if (profile.hypoSymptoms && profile.hypoSymptoms.length > 0) {
+        sections.push(`⚠️ SINTOMAS HIPO CONHECIDOS: ${profile.hypoSymptoms.join(', ')}`);
+    }
+
+    if (profile.hypoHistory === 'frequent') {
+        sections.push(`⚠️ HISTÓRICO: Hipoglicemias FREQUENTES - seja conservador nas doses`);
+    }
+
+    // 💊 MEDICAMENTOS
+    const meds: string[] = [];
+    if (profile.diabetesMeds && profile.diabetesMeds.length > 0) {
+        meds.push(`Orais: ${profile.diabetesMeds.join(', ')}`);
+    }
+    if (profile.glycemicMeds && profile.glycemicMeds.length > 0) {
+        meds.push(`⚠️ Afetam glicemia: ${profile.glycemicMeds.join(', ')}`);
+    }
+    if (meds.length > 0) {
+        sections.push(`💊 MEDICAMENTOS: ${meds.join(' | ')}`);
+    }
+
+    // 🏥 COMORBIDADES
+    if (profile.comorbidities && profile.comorbidities.length > 0) {
+        sections.push(`🏥 COMORBIDADES: ${profile.comorbidities.join(', ')}`);
+    }
+
+    // 🍽️ ALIMENTAÇÃO
+    const foodContext: string[] = [];
+    if (profile.diet && profile.diet !== 'Padrão') {
+        foodContext.push(`Dieta: ${profile.diet}`);
+    }
+    if (profile.problematicFoods && profile.problematicFoods.length > 0) {
+        foodContext.push(`Evita: ${profile.problematicFoods.join(', ')}`);
+    }
+    if (foodContext.length > 0) {
+        sections.push(`🍽️ ALIMENTAÇÃO: ${foodContext.join(' | ')}`);
+    }
+
+    // 🏃 ESTILO DE VIDA
+    const lifestyle: string[] = [];
+    if (profile.exercise && profile.exercise !== 'none') {
+        lifestyle.push(`Exercício: ${profile.exercise}`);
+    }
+    if (profile.alcohol && profile.alcohol !== 'no') {
+        lifestyle.push(`⚠️ Álcool: ${profile.alcohol} (risco hipo tardia)`);
+    }
+    if (profile.sleepQuality === 'poor') {
+        lifestyle.push(`⚠️ Sono ruim (↑ resistência insulina)`);
+    }
+    if (lifestyle.length > 0) {
+        sections.push(`🏃 ESTILO: ${lifestyle.join(' | ')}`);
+    }
+
+    // 👤 PERFIL
+    const age = profile.birthDate ? calculateAge(profile.birthDate) : null;
+    const yearsWithDiabetes = profile.diagnosisYear ? new Date().getFullYear() - profile.diagnosisYear : null;
+
+    if (age || yearsWithDiabetes) {
+        const profileInfo: string[] = [];
+        if (age) profileInfo.push(`${age} anos`);
+        if (yearsWithDiabetes) profileInfo.push(`${yearsWithDiabetes} anos com diabetes`);
+        sections.push(`👤 PERFIL: ${profileInfo.join(', ')}`);
+    }
+
+    return sections.length > 0 ? sections.join('\n') : '';
+}
+
+/**
+ * Infere horário de refeição baseado nas preferências do usuário
+ * OS-18 FASE 1: Corrige lógica hardcoded
+ */
+export function inferMealTime(timestamp: Date, profile: UserProfile): string {
+    const hour = timestamp.getHours();
+
+    // Usar horários personalizados se disponíveis
+    if (profile.mealTimes) {
+        const breakfastHour = profile.mealTimes.breakfast ? parseInt(profile.mealTimes.breakfast.split(':')[0]) : 8;
+        const lunchHour = profile.mealTimes.lunch ? parseInt(profile.mealTimes.lunch.split(':')[0]) : 12;
+        const dinnerHour = profile.mealTimes.dinner ? parseInt(profile.mealTimes.dinner.split(':')[0]) : 19;
+
+        // Lógica dinâmica baseada nas preferências
+        if (hour >= breakfastHour - 1 && hour < lunchHour - 1) return 'Café';
+        if (hour >= lunchHour - 1 && hour < dinnerHour - 1) return 'Almoço';
+        if (hour >= dinnerHour - 1 && hour < 23) return 'Jantar';
+        return 'Lanche';
+    }
+
+    // Fallback: lógica padrão (compatibilidade)
+    if (hour >= 6 && hour < 10) return 'Café';
+    if (hour >= 10 && hour < 12) return 'Lanche da Manhã';
+    if (hour >= 12 && hour < 15) return 'Almoço';
+    if (hour >= 15 && hour < 18) return 'Lanche da Tarde';
+    if (hour >= 18 && hour < 21) return 'Jantar';
+    return 'Ceia';
 }

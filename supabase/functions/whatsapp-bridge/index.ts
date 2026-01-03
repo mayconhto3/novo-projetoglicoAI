@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { GEMINI_TOOLS, getPeriodFilter, getTableName } from './gemini-tools.ts';
 import { processFunctionCalls } from './function-handlers.ts';
-import { findUserProfile, UserProfile } from './services/profileService.ts';
+import { findUserProfile, UserProfile, buildClinicalContext, inferMealTime } from './services/profileService.ts';
 import { processGlucoseRegex, extractGlucoseFromText } from './services/glucoseService.ts';
 import { processMediaInput } from './services/mediaService.ts';
 import { checkGatekeeper, detectMessageType } from './services/gatekeeperService.ts';
@@ -30,18 +30,8 @@ interface GlucoseReading {
 }
 
 // extractGlucoseFromText agora importado de glucoseService.ts
+// inferMealTime agora importado de profileService.ts (OS-18 FASE 1)
 
-
-function inferMealTime(timestamp: Date): string {
-  const hour = timestamp.getHours();
-
-  if (hour >= 6 && hour < 10) return 'Café';
-  if (hour >= 10 && hour < 12) return 'Lanche da Manhã';
-  if (hour >= 12 && hour < 15) return 'Almoço';
-  if (hour >= 15 && hour < 18) return 'Lanche da Tarde';
-  if (hour >= 18 && hour < 21) return 'Jantar';
-  return 'Ceia';
-}
 
 // PROMPT DO SISTEMA OTIMIZADO (CLEAN - SEM INSTRUÇÕES DE JSON TEXTO)
 const generateSystemPrompt = (
@@ -74,6 +64,9 @@ const generateSystemPrompt = (
     ? `✅ TOMADA HOJE (${basalTaken.map(l => `${l.units}u às ${new Date(l.created_at).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })}`).join(', ')})`
     : "⚠️ NÃO REGISTRADA HOJE";
 
+  // OS-18 FASE 2: Construir contexto clínico enriquecido
+  const clinicalContext = buildClinicalContext(profile);
+
   return `
 ATUE COMO: GlucoGuide, assistente especialista em diabetes.
 OBJETIVO: Gerenciar glicemia com segurança absoluta.
@@ -86,7 +79,10 @@ Basal (Lenta): ${basalInfo}
 STATUS BASAL HOJE: ${basalStatus}
 Bolus (Rápida): ${profile.bolusInsulin?.brand || "-"}
 
-=== PARÂMETROS DE CÁLCULO ===
+${clinicalContext ? `=== 🏥 CONTEXTO CLÍNICO (OS-18) ===
+${clinicalContext}
+
+` : ''}=== PARÂMETROS DE CÁLCULO ===
 * Ratio IC (Carboidrato por Unidade de Insulina):
   - Café: ${formatIC(profile.icRatioBreakfast)}
   - Almoço: ${formatIC(profile.icRatioLunch)}
@@ -247,11 +243,14 @@ async function callGemini(
     console.log(`[Function Call] IA solicitou ${parts.filter((p: any) => p.functionCall).length} chamada(s) de função (depth: ${depth})`);
 
     // Processar todas as function calls
+    // OS-18: Wrapper para inferMealTime com profile
+    const inferMealTimeWithProfile = (date: Date) => inferMealTime(date, profile);
+
     const functionResults = await processFunctionCalls(
       parts,
       userId,
       supabase,
-      inferMealTime,
+      inferMealTimeWithProfile,
       getPeriodFilter,
       getTableName,
       profile
