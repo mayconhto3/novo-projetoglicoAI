@@ -664,6 +664,32 @@ export const Step8: React.FC<StepProps> = ({ data, setData }) => (
                     ))}
                 </div>
             </div>
+
+            <div className="section-subtitle">Preferências de Comunicação</div>
+
+            <div className="form-field">
+                <label>Como você prefere que eu me comunique?</label>
+                <div className="pills-container">
+                    <PillTag
+                        label="😊 Amigável (Carinhoso e Motivador)"
+                        isSelected={data.communicationStyle === 'Amigável'}
+                        onClick={() => setData({ ...data, communicationStyle: 'Amigável' })}
+                    />
+                    <PillTag
+                        label="🤖 Direto (Objetivo e Técnico)"
+                        isSelected={data.communicationStyle === 'Direto'}
+                        onClick={() => setData({ ...data, communicationStyle: 'Direto' })}
+                    />
+                    <PillTag
+                        label="⚔️ Educativo (Firme e Disciplinador)"
+                        isSelected={data.communicationStyle === 'Educativo'}
+                        onClick={() => setData({ ...data, communicationStyle: 'Educativo' })}
+                    />
+                </div>
+                <small style={{ color: 'var(--color-gray-500)', fontSize: 'var(--font-size-xs)', marginTop: '8px', display: 'block' }}>
+                    Isso define como a IA vai conversar com você. Você pode mudar depois nas configurações.
+                </small>
+            </div>
         </div>
     </div>
 );

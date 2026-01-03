@@ -69,6 +69,7 @@ interface WizardData {
     diabetesMeds: string[];
     glycemicMeds: string[];
     comorbidities: string[];
+    communicationStyle: string;
 }
 
 const STORAGE_KEY = 'wizard_data_temp';
@@ -133,7 +134,8 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({ onComp
         // Step 8
         diabetesMeds: [],
         glycemicMeds: [],
-        comorbidities: []
+        comorbidities: [],
+        communicationStyle: 'Amigável'
     });
 
     // ============================================================================
@@ -251,16 +253,11 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({ onComp
                 alcohol: data.alcohol,
                 sleepQuality: data.sleepQuality,
 
-                // Step 8: Saúde & Medicamentos (OS-18)
+                // Step 8: Saúde & Medicamentos (OS-18 + OS-20)
                 diabetesMeds: data.diabetesMeds,
                 glycemicMeds: data.glycemicMeds,
                 comorbidities: data.comorbidities,
-
-                // Campos legados (compatibilidade)
-                exerciseFrequency: data.exercise || '',
-                smoker: data.smoking || '',
-                alcoholConsumption: data.alcohol || '',
-                communicationStyle: 'friendly'
+                communicationStyle: data.communicationStyle, // OS-20: Persona dinâmica
             };
 
             console.log('[Wizard] Dados convertidos, chamando onComplete');

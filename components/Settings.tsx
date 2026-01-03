@@ -222,6 +222,31 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
         setOpenSection(openSection === section ? null : section);
     };
 
+    // OS-21: Helper para atualizar arrays (medicamentos, comorbidades, etc)
+    const toggleArrayItem = (field: string, item: string) => {
+        if (!localUser) return;
+
+        const currentArray = (localUser as any)[field] || [];
+        const updated = currentArray.includes(item)
+            ? currentArray.filter((i: string) => i !== item)
+            : [...currentArray, item];
+
+        setLocalUser({ ...localUser, [field]: updated });
+    };
+
+    // OS-21: Helper para atualizar horários de refeições
+    const updateMealTime = (meal: 'breakfast' | 'lunch' | 'dinner', time: string) => {
+        if (!localUser) return;
+
+        setLocalUser({
+            ...localUser,
+            mealTimes: {
+                ...localUser.mealTimes,
+                [meal]: time
+            }
+        });
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-[#029491] to-[#0d4a4b] flex items-center justify-center">
@@ -437,6 +462,63 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     </div>
                 </AccordionSection>
 
+                {/* Seção: Rotina Alimentar (OS-21) */}
+                <AccordionSection
+                    id="meals"
+                    title="ROTINA ALIMENTAR"
+                    icon={<Activity size={20} />}
+                    isOpen={openSection === 'meals'}
+                    onToggle={() => toggleSection('meals')}
+                >
+                    <div className="space-y-4">
+                        <div className="bg-white/5 rounded-xl p-3 mb-4">
+                            <p className="text-xs text-[#b3ffd2] mb-2">💡 Importante</p>
+                            <p className="text-xs text-white/80">
+                                Esses horários ajudam a IA a identificar automaticamente se é café, almoço ou jantar quando você envia uma foto de comida.
+                            </p>
+                        </div>
+
+                        <InputGroup
+                            label="Horário do Café da Manhã"
+                            value={localUser.mealTimes?.breakfast || '08:00'}
+                            onChange={(v) => updateMealTime('breakfast', v)}
+                            editing={editMode === 'breakfastTime'}
+                            onEdit={() => setEditMode('breakfastTime')}
+                            onSave={handleSaveProfile}
+                            onCancel={handleCancel}
+                            saving={saving}
+                            type="time"
+                            placeholder="08:00"
+                        />
+
+                        <InputGroup
+                            label="Horário do Almoço"
+                            value={localUser.mealTimes?.lunch || '12:00'}
+                            onChange={(v) => updateMealTime('lunch', v)}
+                            editing={editMode === 'lunchTime'}
+                            onEdit={() => setEditMode('lunchTime')}
+                            onSave={handleSaveProfile}
+                            onCancel={handleCancel}
+                            saving={saving}
+                            type="time"
+                            placeholder="12:00"
+                        />
+
+                        <InputGroup
+                            label="Horário do Jantar"
+                            value={localUser.mealTimes?.dinner || '19:00'}
+                            onChange={(v) => updateMealTime('dinner', v)}
+                            editing={editMode === 'dinnerTime'}
+                            onEdit={() => setEditMode('dinnerTime')}
+                            onSave={handleSaveProfile}
+                            onCancel={handleCancel}
+                            saving={saving}
+                            type="time"
+                            placeholder="19:00"
+                        />
+                    </div>
+                </AccordionSection>
+
                 {/* Seção: Notificações */}
                 <AccordionSection
                     id="notifications"
@@ -466,6 +548,124 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                             checked={localUser.notificationSettings?.whatsapp ?? true}
                             onChange={(v) => updateNotificationSetting('whatsapp', v)}
                         />
+                    </div>
+                </AccordionSection>
+
+                {/* Seção: Saúde & Medicamentos (OS-21) */}
+                <AccordionSection
+                    id="health"
+                    title="SAÚDE & MEDICAMENTOS"
+                    icon={<Activity size={20} />}
+                    isOpen={openSection === 'health'}
+                    onToggle={() => toggleSection('health')}
+                >
+                    <div className="space-y-4">
+                        <div className="bg-white/5 rounded-xl p-3 mb-4">
+                            <p className="text-xs text-[#b3ffd2] mb-2">💡 Contexto Clínico</p>
+                            <p className="text-xs text-white/80">
+                                Essas informações enriquecem o contexto da IA para recomendações mais seguras e personalizadas.
+                            </p>
+                        </div>
+
+                        {/* Medicamentos para Diabetes */}
+                        <div>
+                            <label className="block text-white text-sm font-medium mb-2">
+                                Medicamentos para Diabetes (Não Insulina)
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {['Metformina', 'Jardiance', 'Ozempic', 'Gliclazida', 'Victoza'].map(med => (
+                                    <PillTag
+                                        key={med}
+                                        label={med}
+                                        isSelected={localUser.diabetesMeds?.includes(med) || false}
+                                        onClick={() => toggleArrayItem('diabetesMeds', med)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Medicamentos que Afetam Glicemia */}
+                        <div>
+                            <label className="block text-white text-sm font-medium mb-2">
+                                Medicamentos que Afetam Glicemia
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {['Corticoides', 'Betabloqueadores', 'Diuréticos', 'Antipsicóticos'].map(med => (
+                                    <PillTag
+                                        key={med}
+                                        label={med}
+                                        isSelected={localUser.glycemicMeds?.includes(med) || false}
+                                        onClick={() => toggleArrayItem('glycemicMeds', med)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Comorbidades */}
+                        <div>
+                            <label className="block text-white text-sm font-medium mb-2">
+                                Comorbidades
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {['Hipertensão', 'Colesterol', 'Neuropatia', 'Retinopatia', 'Doença Renal'].map(comorb => (
+                                    <PillTag
+                                        key={comorb}
+                                        label={comorb}
+                                        isSelected={localUser.comorbidities?.includes(comorb) || false}
+                                        onClick={() => toggleArrayItem('comorbidities', comorb)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </AccordionSection>
+
+                {/* Seção: Preferências de Comunicação (OS-20 + OS-21) */}
+                <AccordionSection
+                    id="communication"
+                    title="PREFERÊNCIAS DE COMUNICAÇÃO"
+                    icon={<Activity size={20} />}
+                    isOpen={openSection === 'communication'}
+                    onToggle={() => toggleSection('communication')}
+                >
+                    <div className="space-y-4">
+                        <div className="bg-white/5 rounded-xl p-3 mb-4">
+                            <p className="text-xs text-[#b3ffd2] mb-2">🎭 Personalidade da IA</p>
+                            <p className="text-xs text-white/80">
+                                Escolha como você prefere que a IA se comunique com você. Isso não afeta os cálculos, apenas o tom das mensagens.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="block text-white text-sm font-medium mb-2">
+                                Estilo de Comunicação
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                <PillTag
+                                    label="😊 Amigável (Carinhoso e Motivador)"
+                                    isSelected={localUser.communicationStyle === 'Amigável'}
+                                    onClick={() => setLocalUser({ ...localUser, communicationStyle: 'Amigável' })}
+                                />
+                                <PillTag
+                                    label="🤖 Direto (Objetivo e Técnico)"
+                                    isSelected={localUser.communicationStyle === 'Direto'}
+                                    onClick={() => setLocalUser({ ...localUser, communicationStyle: 'Direto' })}
+                                />
+                                <PillTag
+                                    label="⚔️ Educativo (Firme e Disciplinador)"
+                                    isSelected={localUser.communicationStyle === 'Educativo'}
+                                    onClick={() => setLocalUser({ ...localUser, communicationStyle: 'Educativo' })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="bg-white/5 rounded-xl p-3">
+                            <p className="text-xs text-white/80">
+                                <strong>Amigável:</strong> "Oi querido! 😊 Sua glicemia está em 120! Você arrasou! 🎉"<br />
+                                <strong>Direto:</strong> "Glicemia: 120 mg/dL. Alvo atingido."<br />
+                                <strong>Educativo:</strong> "120 mg/dL. Bom trabalho. Mantenha o foco."
+                            </p>
+                        </div>
                     </div>
                 </AccordionSection>
 
@@ -716,4 +916,23 @@ const ToggleItem: React.FC<ToggleItemProps> = ({ label, checked, onChange }) => 
             />
         </button>
     </div>
+);
+
+// OS-21: Componente PillTag para seleção múltipla
+interface PillTagProps {
+    label: string;
+    isSelected: boolean;
+    onClick: () => void;
+}
+
+const PillTag: React.FC<PillTagProps> = ({ label, isSelected, onClick }) => (
+    <button
+        onClick={onClick}
+        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${isSelected
+            ? 'bg-[#56da98] text-white shadow-lg scale-105'
+            : 'bg-white/10 text-white hover:bg-white/20'
+            }`}
+    >
+        {label}
+    </button>
 );
