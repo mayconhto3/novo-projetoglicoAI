@@ -1,0 +1,221 @@
+/* OS-16 UX Revision: Wizard Clean Form Styles */
+/* Responsabilidade: Estilos globais para wizard com design limpo */
+/* Data: 2026-01-03 */
+
+.wizard-step {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 3px solid var(--color-primary);
+}
+
+.step-icon {
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.step-header h2 {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-gray-900);
+    margin: 0;
+}
+
+/* Form Sections */
+.form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.section-subtitle {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: -12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.section-subtitle:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+.subsection-label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-700);
+    margin-bottom: 8px;
+}
+
+/* Form Fields */
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-field label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-700);
+}
+
+.form-field label.small-label {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.form-field input,
+.form-field select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #111827;
+    background: #ffffff;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.form-field input:hover,
+.form-field select:hover {
+    border-color: #9ca3af;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+.form-field input:focus,
+.form-field select:focus {
+    outline: none;
+    border-color: #029491;
+    box-shadow: 0 0 0 3px rgba(2, 148, 145, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-field input::placeholder {
+    color: #9ca3af;
+}
+
+/* Form Rows */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-row-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+/* Pills Container */
+.pills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Time Input */
+.time-input {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.time-input input[type="time"] {
+    padding-right: 40px;
+}
+
+.time-icon {
+    position: absolute;
+    right: 12px;
+    color: var(--color-gray-400);
+    pointer-events: none;
+}
+
+/* Input with Button */
+.input-with-button {
+    display: flex;
+    gap: 8px;
+}
+
+.input-with-button input {
+    flex: 1;
+}
+
+.calc-button {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #029491 0%, #027c7a 100%);
+    color: #ffffff;
+    border: 2px solid #029491;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(2, 148, 145, 0.3);
+}
+
+.calc-button:hover {
+    background: linear-gradient(135deg, #027c7a 0%, #026663 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(2, 148, 145, 0.4);
+}
+
+.calc-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(2, 148, 145, 0.3);
+}
+
+/* Responsividade */
+@media (max-width: 640px) {
+    .wizard-step {
+        padding: 24px 20px;
+        border-radius: 12px;
+    }
+
+    .step-header {
+        margin-bottom: 24px;
+    }
+
+    .step-header h2 {
+        font-size: var(--font-size-lg);
+    }
+
+    .form-section {
+        gap: 20px;
+    }
+
+    .form-row,
+    .form-row-3 {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .input-with-button {
+        flex-direction: column;
+    }
+
+    .calc-button {
+        width: 100%;
+    }
+}
