@@ -7,6 +7,7 @@ import React from 'react';
 import { Heart, Activity, Droplet, Syringe, Utensils, Pill, Stethoscope, Clock } from 'lucide-react';
 import { InfoTooltip } from './ui/InfoTooltip';
 import { PillTag } from './ui/PillTag';
+import { CustomSelect } from './ui/CustomSelect';
 
 interface StepProps {
     data: any;
@@ -75,16 +76,17 @@ export const Step1: React.FC<StepProps> = ({ data, setData }) => {
                     </div>
 
                     <div className="form-field">
-                        <label>Gênero</label>
-                        <select
+                        <CustomSelect
+                            label="Gênero"
                             value={data.gender || ''}
-                            onChange={(e) => setData({ ...data, gender: e.target.value })}
-                        >
-                            <option value="">Selecione...</option>
-                            <option value="male">Masculino</option>
-                            <option value="female">Feminino</option>
-                            <option value="other">Outro</option>
-                        </select>
+                            onChange={(value) => setData({ ...data, gender: value })}
+                            options={[
+                                { value: 'male', label: 'Masculino' },
+                                { value: 'female', label: 'Feminino' },
+                                { value: 'other', label: 'Outro' }
+                            ]}
+                            placeholder="Selecione..."
+                        />
                     </div>
                 </div>
             </div>
@@ -159,6 +161,61 @@ export const Step2: React.FC<StepProps> = ({ data, setData }) => (
                     />
                 </div>
             </div>
+
+            <div className="section-subtitle">Uso de Insulina</div>
+
+            <div className="form-field">
+                <label>Você usa insulina?</label>
+                <div className="pills-container">
+                    <PillTag
+                        label="Sim"
+                        isSelected={data.usesInsulin === true}
+                        onClick={() => setData({ ...data, usesInsulin: true })}
+                    />
+                    <PillTag
+                        label="Não"
+                        isSelected={data.usesInsulin === false}
+                        onClick={() => setData({ ...data, usesInsulin: false })}
+                    />
+                </div>
+            </div>
+
+            {data.usesInsulin && (
+                <>
+                    <div className="form-field">
+                        <CustomSelect
+                            label="Método de Aplicação"
+                            value={data.insulinMethod || ''}
+                            onChange={(value) => setData({ ...data, insulinMethod: value })}
+                            options={[
+                                { value: 'pen', label: 'Caneta' },
+                                { value: 'syringe', label: 'Seringa' },
+                                { value: 'pump', label: 'Bomba de Insulina' }
+                            ]}
+                            placeholder="Selecione..."
+                        />
+                    </div>
+
+                    <div className="form-field">
+                        <label>Precisão da Dose (Importante para cálculos)</label>
+                        <div className="pills-container">
+                            <PillTag
+                                label="1.0u (Padrão)"
+                                isSelected={data.insulinStep === '1.0'}
+                                onClick={() => setData({ ...data, insulinStep: '1.0' })}
+                            />
+                            <PillTag
+                                label="0.5u (Pediátrico/Sensível)"
+                                isSelected={data.insulinStep === '0.5'}
+                                onClick={() => setData({ ...data, insulinStep: '0.5' })}
+                            />
+                        </div>
+                        <small style={{ color: 'var(--color-gray-500)', fontSize: 'var(--font-size-xs)', marginTop: '4px', display: 'block' }}>
+                            A IA usará isso para arredondar as doses corretamente
+                        </small>
+                    </div>
+                </>
+            )}
         </div>
     </div>
 );
@@ -296,31 +353,32 @@ export const Step5: React.FC<StepProps> = ({ data, setData }) => (
 
         <div className="form-section">
             <div className="form-field">
-                <label>Frequência de Medição</label>
-                <select
+                <CustomSelect
+                    label="Frequência de Medição"
                     value={data.measurementFrequency || ''}
-                    onChange={(e) => setData({ ...data, measurementFrequency: e.target.value })}
-                >
-                    <option value="">Selecione...</option>
-                    <option value="1-2">1-2 vezes/dia</option>
-                    <option value="3-4">3-4 vezes/dia</option>
-                    <option value="5+">5+ vezes/dia</option>
-                </select>
+                    onChange={(value) => setData({ ...data, measurementFrequency: value })}
+                    options={[
+                        { value: '1-2', label: '1-2 vezes/dia' },
+                        { value: '3-4', label: '3-4 vezes/dia' },
+                        { value: '5+', label: '5+ vezes/dia' }
+                    ]}
+                    placeholder="Selecione..."
+                />
             </div>
 
             <div className="form-field">
-                <label>Histórico Crítico</label>
                 <div className="subsection-label">Hipoglicemia (&lt;70)</div>
-                <select
+                <CustomSelect
                     value={data.hypoHistory || ''}
-                    onChange={(e) => setData({ ...data, hypoHistory: e.target.value })}
-                >
-                    <option value="">Selecione...</option>
-                    <option value="never">Nunca</option>
-                    <option value="rare">Raramente</option>
-                    <option value="sometimes">Às vezes</option>
-                    <option value="frequent">Frequente</option>
-                </select>
+                    onChange={(value) => setData({ ...data, hypoHistory: value })}
+                    options={[
+                        { value: 'never', label: 'Nunca' },
+                        { value: 'rare', label: 'Raramente' },
+                        { value: 'sometimes', label: 'Às vezes' },
+                        { value: 'frequent', label: 'Frequente' }
+                    ]}
+                    placeholder="Selecione..."
+                />
             </div>
 
             <div className="form-field">
@@ -345,16 +403,17 @@ export const Step5: React.FC<StepProps> = ({ data, setData }) => (
 
             <div className="form-field">
                 <div className="subsection-label">Hiperglicemia (&gt;250)</div>
-                <select
+                <CustomSelect
                     value={data.hyperHistory || ''}
-                    onChange={(e) => setData({ ...data, hyperHistory: e.target.value })}
-                >
-                    <option value="">Selecione...</option>
-                    <option value="never">Nunca</option>
-                    <option value="rare">Raramente</option>
-                    <option value="sometimes">Às vezes</option>
-                    <option value="frequent">Frequente</option>
-                </select>
+                    onChange={(value) => setData({ ...data, hyperHistory: value })}
+                    options={[
+                        { value: 'never', label: 'Nunca' },
+                        { value: 'rare', label: 'Raramente' },
+                        { value: 'sometimes', label: 'Às vezes' },
+                        { value: 'frequent', label: 'Frequente' }
+                    ]}
+                    placeholder="Selecione..."
+                />
             </div>
         </div>
     </div>
@@ -423,16 +482,17 @@ export const Step6: React.FC<StepProps> = ({ data, setData }) => (
             </div>
 
             <div className="form-field">
-                <label>Conta Carboidratos?</label>
-                <select
+                <CustomSelect
+                    label="Conta Carboidratos?"
                     value={data.countCarbs || ''}
-                    onChange={(e) => setData({ ...data, countCarbs: e.target.value })}
-                >
-                    <option value="">Selecione...</option>
-                    <option value="always">Sempre</option>
-                    <option value="sometimes">Às vezes</option>
-                    <option value="never">Nunca</option>
-                </select>
+                    onChange={(value) => setData({ ...data, countCarbs: value })}
+                    options={[
+                        { value: 'always', label: 'Sempre' },
+                        { value: 'sometimes', label: 'Às vezes' },
+                        { value: 'never', label: 'Nunca' }
+                    ]}
+                    placeholder="Selecione..."
+                />
             </div>
 
             <div className="form-field">
@@ -471,59 +531,63 @@ export const Step7: React.FC<StepProps> = ({ data, setData }) => (
 
         <div className="form-section">
             <div className="form-field">
-                <label>Exercícios</label>
-                <select
+                <CustomSelect
+                    label="Exercícios"
                     value={data.exercise || ''}
-                    onChange={(e) => setData({ ...data, exercise: e.target.value })}
-                >
-                    <option value="">Selecione...</option>
-                    <option value="none">Não pratico</option>
-                    <option value="light">Leve (1-2x/semana)</option>
-                    <option value="moderate">Moderado (3-4x/semana)</option>
-                    <option value="intense">Intenso (5+x/semana)</option>
-                </select>
+                    onChange={(value) => setData({ ...data, exercise: value })}
+                    options={[
+                        { value: 'none', label: 'Não pratico' },
+                        { value: 'light', label: 'Leve (1-2x/semana)' },
+                        { value: 'moderate', label: 'Moderado (3-4x/semana)' },
+                        { value: 'intense', label: 'Intenso (5+x/semana)' }
+                    ]}
+                    placeholder="Selecione..."
+                />
             </div>
 
             <div className="form-row">
                 <div className="form-field">
-                    <label>Fuma?</label>
-                    <select
+                    <CustomSelect
+                        label="Fuma?"
                         value={data.smoking || ''}
-                        onChange={(e) => setData({ ...data, smoking: e.target.value })}
-                    >
-                        <option value="">Selecione...</option>
-                        <option value="no">Não</option>
-                        <option value="yes">Sim</option>
-                        <option value="former">Ex-fumante</option>
-                    </select>
+                        onChange={(value) => setData({ ...data, smoking: value })}
+                        options={[
+                            { value: 'no', label: 'Não' },
+                            { value: 'yes', label: 'Sim' },
+                            { value: 'former', label: 'Ex-fumante' }
+                        ]}
+                        placeholder="Selecione..."
+                    />
                 </div>
 
                 <div className="form-field">
-                    <label>Álcool?</label>
-                    <select
+                    <CustomSelect
+                        label="Álcool?"
                         value={data.alcohol || ''}
-                        onChange={(e) => setData({ ...data, alcohol: e.target.value })}
-                    >
-                        <option value="">Selecione...</option>
-                        <option value="no">Não</option>
-                        <option value="occasional">Ocasional</option>
-                        <option value="regular">Regular</option>
-                    </select>
+                        onChange={(value) => setData({ ...data, alcohol: value })}
+                        options={[
+                            { value: 'no', label: 'Não' },
+                            { value: 'occasional', label: 'Ocasional' },
+                            { value: 'regular', label: 'Regular' }
+                        ]}
+                        placeholder="Selecione..."
+                    />
                 </div>
             </div>
 
             <div className="form-field">
-                <label>Qualidade do Sono</label>
-                <select
+                <CustomSelect
+                    label="Qualidade do Sono"
                     value={data.sleepQuality || ''}
-                    onChange={(e) => setData({ ...data, sleepQuality: e.target.value })}
-                >
-                    <option value="">Selecione...</option>
-                    <option value="poor">Ruim</option>
-                    <option value="fair">Regular</option>
-                    <option value="good">Bom</option>
-                    <option value="excellent">Durmo bem</option>
-                </select>
+                    onChange={(value) => setData({ ...data, sleepQuality: value })}
+                    options={[
+                        { value: 'poor', label: 'Ruim' },
+                        { value: 'fair', label: 'Regular' },
+                        { value: 'good', label: 'Bom' },
+                        { value: 'excellent', label: 'Durmo bem' }
+                    ]}
+                    placeholder="Selecione..."
+                />
             </div>
         </div>
     </div>

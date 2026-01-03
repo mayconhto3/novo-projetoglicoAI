@@ -25,39 +25,50 @@ interface WizardData {
     birthDate: string;
     gender: 'male' | 'female' | 'other' | '';
 
-    // Step 2: Sobre o Diabetes
-    diabetesType: 'type1' | 'type2' | 'gestational' | '';
+    // Step 2: Sobre o Diabetes + Insulina
+    diabetesType: 'type1' | 'type2' | 'gestational' | 'prediabetes' | 'unknown' | '';
     diagnosisYear: string;
+    hba1c: string;
+    usesInsulin: boolean | null;
+    insulinMethod: 'pen' | 'pump' | 'syringe' | '';
+    insulinStep: '1.0' | '0.5' | '';
 
     // Step 3: Dados Físicos
     weight: string;
     height: string;
 
-    // Step 4: Uso de Insulina
-    usesInsulin: boolean | null;
-    insulinMethod: 'pen' | 'pump' | 'syringe' | '';
-    insulinStep: '1.0' | '0.5' | '0.1' | '';
-
-    // Step 5: Insulina Basal
-    basalInsulin: string;
-    basalDoseMorning: string;
-    basalDoseNight: string;
-    basalTimeMorning: string;
-    basalTimeNight: string;
-
-    // Step 6: Insulina Bolus
-    bolusInsulin: string;
-
-    // Step 7: Ratios IC
-    icRatioBreakfast: string;
-    icRatioLunch: string;
-    icRatioDinner: string;
-    icRatioSnack: string;
-
-    // Step 8: Metas e Sensibilidade
+    // Step 4: Parâmetros
+    totalBasal: string;
+    totalBolus: string;
+    ratioIC: string;
+    correctionFactor: string;
     targetGlucosePreMeal: string;
     targetGlucosePostMeal: string;
-    isfMorning: string;
+
+    // Step 5: Monitoramento
+    measurementFrequency: string;
+    hypoHistory: string;
+    hyperHistory: string;
+    hypoSymptoms: string[];
+
+    // Step 6: Alimentação
+    breakfastTime: string;
+    lunchTime: string;
+    dinnerTime: string;
+    diet: string;
+    countCarbs: string;
+    problematicFoods: string[];
+
+    // Step 7: Estilo de Vida
+    exercise: string;
+    smoking: string;
+    alcohol: string;
+    sleepQuality: string;
+
+    // Step 8: Saúde & Medicamentos
+    diabetesMeds: string[];
+    glycemicMeds: string[];
+    comorbidities: string[];
 }
 
 const STORAGE_KEY = 'wizard_data_temp';
@@ -73,30 +84,56 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({ onComp
 
     // Estado inicial
     const [data, setData] = useState<WizardData>({
+        // Step 1
         name: '',
-        phone: '', // CRÍTICO: WhatsApp
+        phone: '',
         birthDate: '',
         gender: '',
+
+        // Step 2
         diabetesType: '',
         diagnosisYear: '',
-        weight: '',
-        height: '',
+        hba1c: '',
         usesInsulin: null,
         insulinMethod: '',
         insulinStep: '',
-        basalInsulin: '',
-        basalDoseMorning: '',
-        basalDoseNight: '',
-        basalTimeMorning: '',
-        basalTimeNight: '',
-        bolusInsulin: '',
-        icRatioBreakfast: '',
-        icRatioLunch: '',
-        icRatioDinner: '',
-        icRatioSnack: '',
-        targetGlucosePreMeal: '',
-        targetGlucosePostMeal: '',
-        isfMorning: '',
+
+        // Step 3
+        weight: '',
+        height: '',
+
+        // Step 4
+        totalBasal: '',
+        totalBolus: '',
+        ratioIC: '',
+        correctionFactor: '',
+        targetGlucosePreMeal: '100',
+        targetGlucosePostMeal: '140',
+
+        // Step 5
+        measurementFrequency: '',
+        hypoHistory: '',
+        hyperHistory: '',
+        hypoSymptoms: [],
+
+        // Step 6
+        breakfastTime: '08:00',
+        lunchTime: '12:00',
+        dinnerTime: '19:00',
+        diet: '',
+        countCarbs: '',
+        problematicFoods: [],
+
+        // Step 7
+        exercise: '',
+        smoking: '',
+        alcohol: '',
+        sleepQuality: '',
+
+        // Step 8
+        diabetesMeds: [],
+        glycemicMeds: [],
+        comorbidities: []
     });
 
     // ============================================================================
@@ -165,35 +202,65 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({ onComp
 
             // Converter dados do wizard para UserProfile
             const profile: UserProfile = {
+                // Step 1: Informações Básicas
                 name: data.name,
                 email: '', // Será preenchido pelo App.tsx
-                phone: cleanPhone, // CRÍTICO: Telefone limpo
+                phone: cleanPhone,
                 birthDate: data.birthDate,
                 gender: data.gender as any,
+
+                // Step 2: Diagnóstico + Insulina
                 diabetesType: data.diabetesType as any,
-                diagnosisYear: parseInt(data.diagnosisYear),
-                weight: parseFloat(data.weight),
-                height: parseFloat(data.height),
+                diagnosisYear: parseInt(data.diagnosisYear) || 0,
+                hba1c: parseFloat(data.hba1c) || undefined,
                 usesInsulin: data.usesInsulin || false,
-                insulinMethod: data.insulinMethod,
-                insulinStep: parseFloat(data.insulinStep),
-                basalInsulin: {
-                    brand: data.basalInsulin,
-                    doseMorning: parseFloat(data.basalDoseMorning) || 0,
-                    doseNight: parseFloat(data.basalDoseNight) || 0,
-                    timeMorning: data.basalTimeMorning,
-                    timeNight: data.basalTimeNight,
+                insulinMethod: data.insulinMethod as any,
+                insulinStep: data.insulinStep === '0.5' ? 0.5 : 1.0,
+
+                // Step 3: Dados Físicos
+                weight: parseFloat(data.weight) || 0,
+                height: parseFloat(data.height) || 0,
+
+                // Step 4: Parâmetros
+                icRatioBreakfast: parseFloat(data.ratioIC) || undefined,
+                icRatioLunch: parseFloat(data.ratioIC) || undefined,
+                icRatioDinner: parseFloat(data.ratioIC) || undefined,
+                icRatioSnack: parseFloat(data.ratioIC) || undefined,
+                isfMorning: parseFloat(data.correctionFactor) || undefined,
+                targetGlucosePreMeal: parseFloat(data.targetGlucosePreMeal) || 100,
+                targetGlucosePostMeal: parseFloat(data.targetGlucosePostMeal) || 140,
+
+                // Step 5: Monitoramento (OS-18)
+                hypoHistory: data.hypoHistory as any,
+                hyperHistory: data.hyperHistory as any,
+                hypoSymptoms: data.hypoSymptoms,
+
+                // Step 6: Alimentação (OS-18)
+                mealTimes: {
+                    breakfast: data.breakfastTime,
+                    lunch: data.lunchTime,
+                    dinner: data.dinnerTime
                 },
-                bolusInsulin: {
-                    brand: data.bolusInsulin,
-                },
-                icRatioBreakfast: parseFloat(data.icRatioBreakfast),
-                icRatioLunch: parseFloat(data.icRatioLunch),
-                icRatioDinner: parseFloat(data.icRatioDinner),
-                icRatioSnack: parseFloat(data.icRatioSnack),
-                targetGlucosePreMeal: parseFloat(data.targetGlucosePreMeal),
-                targetGlucosePostMeal: parseFloat(data.targetGlucosePostMeal),
-                isfMorning: parseFloat(data.isfMorning),
+                diet: data.diet,
+                countCarbs: data.countCarbs as any,
+                problematicFoods: data.problematicFoods,
+
+                // Step 7: Estilo de Vida (OS-18)
+                exercise: data.exercise,
+                smoking: data.smoking,
+                alcohol: data.alcohol,
+                sleepQuality: data.sleepQuality,
+
+                // Step 8: Saúde & Medicamentos (OS-18)
+                diabetesMeds: data.diabetesMeds,
+                glycemicMeds: data.glycemicMeds,
+                comorbidities: data.comorbidities,
+
+                // Campos legados (compatibilidade)
+                exerciseFrequency: data.exercise || '',
+                smoker: data.smoking || '',
+                alcoholConsumption: data.alcohol || '',
+                communicationStyle: 'friendly'
             };
 
             console.log('[Wizard] Dados convertidos, chamando onComplete');
