@@ -187,9 +187,10 @@ ${readings.length > 0 ? readings.slice(0, 5).map(r => `- ${new Date(r.timestamp)
    
    [CENÁRIO A] 🩸 FOTO DE GLICOSÍMETRO / MONITOR:
      - AÇÃO ÚNICA: Registre APENAS o valor da glicemia.
-     - PROIBIDO: NUNCA calcule carboidratos ou registre refeição, mesmo que a glicemia esteja alta.
+     - ⛔ PROIBIDO ABSOLUTO: NUNCA calcule carboidratos, NUNCA registre refeição, NUNCA invente comida.
      - RACIOCÍNIO: Glicemia alta ≠ "Acabou de comer". Não assuma nada.
      - FEEDBACK: "Vi sua glicemia em [X]. Vou registrar." (Ponto final).
+     - ⚠️ CRÍTICO: Se você vê um glicosímetro, É IMPOSSÍVEL que seja comida. Não invente pratos.
 
    [CENÁRIO B] 🍽️ FOTO DE COMIDA REAL:
      - AÇÃO: Identifique alimentos -> Estime Carbos -> Sugira Insulina.
@@ -202,10 +203,11 @@ ${readings.length > 0 ? readings.slice(0, 5).map(r => `- ${new Date(r.timestamp)
      - Se não tiver certeza se é comida ou reflexo: PERGUNTE antes de calcular.
      - Exemplo: "Vi sua glicemia em 203. Você acabou de comer algo?"
 
-3. � ANTI-ALUCINAÇÃO:
-   - Jamais registre "Arroz e Feijão" (ou pratos comuns) a menos que você os VEJA CLARAMENTE na foto ATUAL.
-   - Se o usuário mandou foto de glicosímetro e você registrou "Refeição", você ERROU. Corrija-se.
-   - NÃO conecte glicemia alta com refeições passadas. Cada mensagem é independente.
+3. 🛡️ ANTI-ALUCINAÇÃO (CRÍTICO):
+   - ⛔ JAMAIS registre "Arroz e Feijão" (ou pratos comuns) a menos que você os VEJA CLARAMENTE na foto ATUAL.
+   - ⛔ Se o usuário mandou foto de glicosímetro e você registrou "Refeição", você ERROU GRAVEMENTE. Corrija-se.
+   - ⛔ NÃO conecte glicemia alta com refeições passadas. Cada mensagem é independente.
+   - ⛔ GLICOSÍMETRO NÃO É COMIDA. Se você vê números em uma tela, é glicemia, não carboidratos.
 
 4. IOB (INSULINA ATIVA): Sempre use o valor exato do PERFIL acima. Não calcule manualmente baseado em doses aplicadas.
 
@@ -434,6 +436,40 @@ serve(async (req) => {
     }
 
     const { id: userId, profile } = userResult;
+
+    // ============================================
+    // 🛡️ FIREWALL ANTI-LOOP (CRÍTICO)
+    // ============================================
+    // Previne custos excessivos por loops de mensagens duplicadas
+    // Se a mesma mensagem foi enviada há menos de 45s, bloqueia
+
+    if (message && message.trim()) {
+      const { data: recentMessages } = await supabase
+        .from('chat_history')
+        .select('user_message, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (recentMessages && recentMessages.length > 0) {
+        const lastMessage = recentMessages[0];
+        const lastMessageTime = new Date(lastMessage.created_at).getTime();
+        const now = Date.now();
+        const timeDiff = (now - lastMessageTime) / 1000; // segundos
+
+        // Se a mensagem é EXATAMENTE igual e foi enviada há menos de 45s
+        if (lastMessage.user_message === message.trim() && timeDiff < 45) {
+          console.log(`[Anti-Loop] Mensagem duplicada bloqueada (${timeDiff.toFixed(1)}s)`);
+
+          return new Response(JSON.stringify({
+            number: cleanInputPhone,
+            reply_type: "text",
+            reply_content: "⏳ Aguarde um momento, ainda estou processando sua mensagem anterior..."
+          }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+    }
+
 
     // ============================================
     // 🔒 OS-11: GATEKEEPER (INTERCEPTOR DE ACESSO)

@@ -121,12 +121,16 @@ const App: React.FC = () => {
       }
 
       // 2. Salvar perfil COMPLETO no Supabase
+      // CRÍTICO: Salvar phone na COLUNA SQL (não apenas no JSON)
+      // Isso permite que a WhatsApp Bridge encontre o usuário correto
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: session.user.id,
           email: session.user.email,
           name: profile.name,
+          phone: cleanNumber, // ← OBRIGATÓRIO PARA A IA FUNCIONAR
+          updated_at: new Date().toISOString(),
           medical_data: {
             ...profile,
             phone: cleanNumber

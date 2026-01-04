@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserProfile, DiabetesType, Gender, Medication } from '../types';
 import { ChevronRight, ChevronLeft, Check, AlertCircle, Heart, Activity, Clock, ShieldCheck, UserCog, Utensils, Stethoscope, Bell, Syringe } from 'lucide-react';
+import { CustomSelect } from './ui/CustomSelect';
 
 interface QuestionnaireProps {
     onComplete: (profile: UserProfile) => void;
@@ -289,8 +290,18 @@ export const Questionnaire: React.FC<QuestionnaireProps> = ({ onComplete }) => {
 
                     <div className="space-y-2 pt-2 border-t border-slate-100">
                         <h4 className="text-sm font-bold text-slate-700">Basal (Lenta)</h4>
-                        <input type="text" placeholder="Marca (ex: Lantus)" className="input-field"
-                            onChange={(e) => handleNestedChange('basalInsulin', 'brand', e.target.value)} />
+                        <CustomSelect
+                            options={[
+                                'Lantus', 'Basaglar', 'Semglee', 'Rezvoglar',
+                                'Basalog', 'Basalog One', 'Glaritus', 'Glaricon',
+                                'Glarisulin', 'Lansta', 'Toujeo', 'Tresiba',
+                                'Levemir', 'Humulin N', 'Novolin N',
+                                'Iletin II', 'Insulatard MC', 'Protaphane HM', 'Outro'
+                            ]}
+                            value={formData.basalInsulin?.brand || ''}
+                            onChange={(v) => handleNestedChange('basalInsulin', 'brand', v)}
+                            placeholder="Selecione a marca"
+                        />
                         <div className="grid grid-cols-2 gap-2">
                             <input type="number" placeholder="Dose Manhã" className="input-field" onChange={(e) => handleNestedChange('basalInsulin', 'morningDose', parseFloat(e.target.value))} />
                             <input type="time" className="input-field" onChange={(e) => handleNestedChange('basalInsulin', 'morningTime', e.target.value)} />
@@ -303,8 +314,18 @@ export const Questionnaire: React.FC<QuestionnaireProps> = ({ onComplete }) => {
 
                     <div className="space-y-2 pt-2 border-t border-slate-100">
                         <h4 className="text-sm font-bold text-slate-700">Bolus (Rápida)</h4>
-                        <input type="text" placeholder="Marca (ex: Humalog)" className="input-field"
-                            onChange={(e) => handleNestedChange('bolusInsulin', 'brand', e.target.value)} />
+                        <CustomSelect
+                            options={[
+                                'Humalog', 'NovoRapid', 'Fiasp', 'Apidra',
+                                'Lyumjev', 'Admelog', 'Insulin Lispro',
+                                'Insulin Aspart', 'Insulin Glulisine',
+                                'Humulin R', 'Novolin R', 'Actrapid',
+                                'Regular Iletin II', 'Outro'
+                            ]}
+                            value={formData.bolusInsulin?.brand || ''}
+                            onChange={(v) => handleNestedChange('bolusInsulin', 'brand', v)}
+                            placeholder="Selecione a marca"
+                        />
                     </div>
                 </div>
             )}

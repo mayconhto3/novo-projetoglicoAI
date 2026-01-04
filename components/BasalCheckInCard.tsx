@@ -17,8 +17,13 @@ export const BasalCheckInCard: React.FC<BasalCheckInCardProps> = ({ user, todays
         night?: { time: string; dose: number; created_at: string };
     }>({});
 
-    // Se não usa insulina ou não tem basal configurada, não mostra nada
-    if (!user.usesInsulin || !user.basalInsulin?.brand) return null;
+    // Se não usa insulina ou não tem doses basais configuradas, não mostra nada
+    if (!user.usesInsulin || !user.basalInsulin?.uses) return null;
+
+    // Se não tem doses configuradas (manhã OU noite), não mostra
+    const hasDoses = (user.basalInsulin?.morningDose && user.basalInsulin?.morningDose > 0) ||
+        (user.basalInsulin?.nightDose && user.basalInsulin?.nightDose > 0);
+    if (!hasDoses) return null;
 
     const { brand, morningDose, nightDose, morningTime, nightTime } = user.basalInsulin;
 

@@ -9,7 +9,7 @@ import { ChevronDown, Check } from 'lucide-react';
 interface CustomSelectProps {
   value: string;
   onChange: (value: string) => void;
-  options: { value: string; label: string }[];
+  options: string[] | { value: string; label: string }[]; // Aceita ambos
   placeholder?: string;
   label?: string;
 }
@@ -24,6 +24,11 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
 
+  // Normalizar options para sempre ter {value, label}
+  const normalizedOptions = options.map(opt =>
+    typeof opt === 'string' ? { value: opt, label: opt } : opt
+  );
+
   // Fechar ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -36,7 +41,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = normalizedOptions.find(opt => opt.value === value);
 
   return (
     <div className="custom-select-wrapper">
@@ -59,7 +64,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
         {isOpen && (
           <div className="select-dropdown">
-            {options.map((option) => (
+            {normalizedOptions.map((option) => (
               <div
                 key={option.value}
                 className={`select-option ${option.value === value ? 'selected' : ''}`}

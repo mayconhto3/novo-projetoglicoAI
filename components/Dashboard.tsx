@@ -521,7 +521,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                         />
                     </div>
 
-                    {/* 4. Profile Completion Card - QUARTO (Complete seu Perfil - abaixo do gráfico) */}
+                    {/* 4. Profile Completion Card - REMOVIDO (XP já está no header) */}
+                    {/* Card removido para não distrair usuários durante alertas ou glicemia baixa */}
+                    {/* A barra de XP e nível já está visível no topo (NavbarXP) */}
+                    {/*
                     {(() => {
                         const completionPercentage = calculateCompletionPercentage(user);
                         const tasks = Object.keys(PROFILE_TASK_METADATA).map(key => ({
@@ -545,6 +548,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                         }
                         return null;
                     })()}
+                    */}
 
                     {/* Risk Clock */}
                     {riskPatterns && riskPatterns.worst.risk > 15 && (

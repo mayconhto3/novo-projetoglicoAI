@@ -6,6 +6,7 @@ import {
     Save, X, Edit2, Check, AlertCircle, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { InfoTooltip, FIELD_EXPLANATIONS } from './InfoTooltip';
+import { CustomSelect } from './ui/CustomSelect';
 
 interface SettingsProps {
     onBack: () => void;
@@ -198,11 +199,21 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
     const updateBasalField = (field: string, value: any) => {
         if (!localUser) return;
+
+        const updatedBasal = {
+            ...localUser.basalInsulin,
+            [field]: value
+        };
+
+        // Auto-ativar basalInsulin.uses se doses forem configuradas
+        const hasDoses = (updatedBasal.morningDose && updatedBasal.morningDose > 0) ||
+            (updatedBasal.nightDose && updatedBasal.nightDose > 0);
+
         setLocalUser({
             ...localUser,
             basalInsulin: {
-                ...localUser.basalInsulin,
-                [field]: value
+                ...updatedBasal,
+                uses: hasDoses // Auto-ativa se tiver doses
             }
         });
     };
@@ -432,46 +443,134 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                         </div>
 
                         <div>
-                            <div className="flex items-center">
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-white text-sm font-medium">Marca da Basal</label>
+                                <InfoTooltip {...FIELD_EXPLANATIONS.basalBrand} />
+                            </div>
+                            <CustomSelect
+                                options={[
+                                    'Lantus',
+                                    'Basaglar',
+                                    'Semglee',
+                                    'Rezvoglar',
+                                    'Basalog',
+                                    'Basalog One',
+                                    'Glaritus',
+                                    'Glaricon',
+                                    'Glarisulin',
+                                    'Lansta',
+                                    'Toujeo',
+                                    'Tresiba',
+                                    'Levemir',
+                                    'Humulin N',
+                                    'Novolin N',
+                                    'Iletin II',
+                                    'Insulatard MC',
+                                    'Protaphane HM',
+                                    'Outro'
+                                ]}
+                                value={localUser.basalInsulin?.brand || ''}
+                                onChange={(v) => updateBasalField('brand', v)}
+                                placeholder="Selecione a marca"
+                            />
+                        </div>
+
+                        {/* Insulina Basal - Doses e Horários */}
+                        <div className="space-y-3 mt-4">
+                            <div className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2">⏰ Quando você toma sua insulina basal?</div>
+
+                            {/* Dose da Manhã */}
+                            <div className="grid grid-cols-2 gap-3">
                                 <InputGroup
-                                    label="Marca da Basal"
-                                    value={localUser.basalInsulin?.brand || ''}
-                                    onChange={(v) => updateBasalField('brand', v)}
-                                    editing={editMode === 'basalBrand'}
-                                    onEdit={() => setEditMode('basalBrand')}
+                                    label="🌅 Quantas unidades de manhã?"
+                                    value={localUser.basalInsulin?.morningDose?.toString() || ''}
+                                    onChange={(v) => updateBasalField('morningDose', parseFloat(v) || 0)}
+                                    editing={editMode === 'basalMorningDose'}
+                                    onEdit={() => setEditMode('basalMorningDose')}
                                     onSave={handleSaveProfile}
                                     onCancel={handleCancel}
                                     saving={saving}
-                                    placeholder="Ex: Lantus, Tresiba, Levemir"
+                                    placeholder="Ex: 10"
+                                    type="number"
                                 />
-                                <InfoTooltip {...FIELD_EXPLANATIONS.basalBrand} />
+                                <InputGroup
+                                    label="🕐 Que horas você toma?"
+                                    value={localUser.basalInsulin?.morningTime || ''}
+                                    onChange={(v) => updateBasalField('morningTime', v)}
+                                    editing={editMode === 'basalMorningTime'}
+                                    onEdit={() => setEditMode('basalMorningTime')}
+                                    onSave={handleSaveProfile}
+                                    onCancel={handleCancel}
+                                    saving={saving}
+                                    placeholder="Ex: 08:00"
+                                    type="time"
+                                />
+                            </div>
+
+                            {/* Dose da Noite */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <InputGroup
+                                    label="🌙 Quantas unidades à noite?"
+                                    value={localUser.basalInsulin?.nightDose?.toString() || ''}
+                                    onChange={(v) => updateBasalField('nightDose', parseFloat(v) || 0)}
+                                    editing={editMode === 'basalNightDose'}
+                                    onEdit={() => setEditMode('basalNightDose')}
+                                    onSave={handleSaveProfile}
+                                    onCancel={handleCancel}
+                                    saving={saving}
+                                    placeholder="Ex: 12"
+                                    type="number"
+                                />
+                                <InputGroup
+                                    label="🕐 Que horas você toma?"
+                                    value={localUser.basalInsulin?.nightTime || ''}
+                                    onChange={(v) => updateBasalField('nightTime', v)}
+                                    editing={editMode === 'basalNightTime'}
+                                    onEdit={() => setEditMode('basalNightTime')}
+                                    onSave={handleSaveProfile}
+                                    onCancel={handleCancel}
+                                    saving={saving}
+                                    placeholder="Ex: 22:00"
+                                    type="time"
+                                />
                             </div>
                         </div>
 
                         <div>
-                            <div className="flex items-center">
-                                <InputGroup
-                                    label="Marca da Rápida (Bolus)"
-                                    value={localUser.bolusInsulin?.brand || ''}
-                                    onChange={(v) => {
-                                        if (!localUser) return;
-                                        setLocalUser({
-                                            ...localUser,
-                                            bolusInsulin: { ...localUser.bolusInsulin, brand: v }
-                                        });
-                                    }}
-                                    editing={editMode === 'bolusBrand'}
-                                    onEdit={() => setEditMode('bolusBrand')}
-                                    onSave={handleSaveProfile}
-                                    onCancel={handleCancel}
-                                    saving={saving}
-                                    placeholder="Ex: Humalog, NovoRapid, Fiasp"
-                                />
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-white text-sm font-medium">Marca da Rápida (Bolus)</label>
                                 <InfoTooltip
                                     title="Marca da Insulina Rápida (Bolus)"
                                     content="Nome da sua insulina de ação rápida (bolus), usada nas refeições.\n\n💉 Exemplos comuns:\n• Humalog (lispro)\n• NovoRapid (aspart)\n• Fiasp (aspart ultra-rápida)\n• Apidra (glulisina)\n\n📝 Ajuda a IA a entender seu tratamento completo e fazer sugestões mais personalizadas."
                                 />
                             </div>
+                            <CustomSelect
+                                options={[
+                                    'Humalog',
+                                    'NovoRapid',
+                                    'Fiasp',
+                                    'Apidra',
+                                    'Lyumjev',
+                                    'Admelog',
+                                    'Insulin Lispro',
+                                    'Insulin Aspart',
+                                    'Insulin Glulisine',
+                                    'Humulin R',
+                                    'Novolin R',
+                                    'Actrapid',
+                                    'Regular Iletin II',
+                                    'Outro'
+                                ]}
+                                value={localUser.bolusInsulin?.brand || ''}
+                                onChange={(v) => {
+                                    if (!localUser) return;
+                                    setLocalUser({
+                                        ...localUser,
+                                        bolusInsulin: { ...localUser.bolusInsulin, brand: v }
+                                    });
+                                }}
+                                placeholder="Selecione a marca"
+                            />
                         </div>
 
                         <div className="bg-white/5 rounded-xl p-3">
