@@ -137,19 +137,21 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
             const { data: { user: authUser } } = await supabase.auth.getUser();
             if (!authUser) throw new Error('Não autenticado');
 
-            // FIX CRÍTICO: UPSERT + SCHEMA CORRETO
-            // Salvamos apenas colunas SQL reais na raiz. O resto vai para medical_data.
+            // FIX DEFINITIVO: SCHEMA REAL DO SUPABASE
+            // Colunas SQL que EXISTEM na tabela profiles
             const { error: updateError } = await supabase
                 .from('profiles')
                 .upsert({
+                    // --- COLUNAS SQL (Nível 1) ---
                     id: authUser.id,
                     name: localUser.name,
                     phone: localUser.phone,
+                    email: authUser.email,
                     target_glucose_min: localUser.targetGlucosePreMeal,
                     target_glucose_max: localUser.targetGlucosePostMeal,
                     updated_at: new Date().toISOString(),
 
-                    // O GRANDE TRUQUE: Tudo que dava erro de coluna vai encapsulado aqui
+                    // --- COFRE JSON (Nível 2 - Todo o resto) ---
                     medical_data: {
                         ...localUser,
                         weight: localUser.weight,
