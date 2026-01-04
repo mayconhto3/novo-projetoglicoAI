@@ -151,12 +151,15 @@ export const Step2: React.FC<StepProps> = ({ data, setData }) => (
                 </div>
 
                 <div className="form-field">
-                    <label>HbA1c Recente (%)</label>
+                    <div className="flex items-center justify-between mb-2">
+                        <label>HbA1c Recente (%)</label>
+                        <InfoTooltip {...FIELD_EXPLANATIONS.hba1c} />
+                    </div>
                     <input
                         type="number"
                         value={data.hba1c || ''}
                         onChange={(e) => setData({ ...data, hba1c: e.target.value })}
-                        placeholder="7.5"
+                        placeholder="Ex: 7.5 (média dos últimos 3 meses)"
                         step="0.1"
                     />
                 </div>
@@ -292,26 +295,32 @@ export const Step4: React.FC<StepProps> = ({ data, setData }) => (
             </div>
 
             <div className="form-field">
-                <label>Ratio IC (I:g)</label>
+                <div className="flex items-center justify-between mb-2">
+                    <label>Ratio IC (I:g)</label>
+                    <InfoTooltip {...FIELD_EXPLANATIONS.ratioIC} />
+                </div>
                 <div className="input-with-button">
                     <input
                         type="number"
                         value={data.ratioIC || ''}
                         onChange={(e) => setData({ ...data, ratioIC: e.target.value })}
-                        placeholder="Sei"
+                        placeholder="Ex: 10 (1u cobre 10g de carbo)"
                     />
                     <button type="button" className="calc-button">Calcular</button>
                 </div>
             </div>
 
             <div className="form-field">
-                <label>Fator Correção (mg/dL)</label>
+                <div className="flex items-center justify-between mb-2">
+                    <label>Fator Correção (mg/dL)</label>
+                    <InfoTooltip {...FIELD_EXPLANATIONS.correctionFactor} />
+                </div>
                 <div className="input-with-button">
                     <input
                         type="number"
                         value={data.correctionFactor || ''}
                         onChange={(e) => setData({ ...data, correctionFactor: e.target.value })}
-                        placeholder="Sei"
+                        placeholder="Ex: 50 (1u abaixa 50mg/dL)"
                     />
                     <button type="button" className="calc-button">Calcular</button>
                 </div>
@@ -320,7 +329,10 @@ export const Step4: React.FC<StepProps> = ({ data, setData }) => (
             <div className="section-subtitle">Metas Glicêmicas</div>
             <div className="form-row">
                 <div className="form-field">
-                    <label className="small-label">PRÉ-REFEIÇÃO</label>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="small-label">PRÉ-REFEIÇÃO</label>
+                        <InfoTooltip {...FIELD_EXPLANATIONS.targetPreMeal} />
+                    </div>
                     <input
                         type="number"
                         value={data.targetGlucosePreMeal || '100'}
@@ -328,7 +340,10 @@ export const Step4: React.FC<StepProps> = ({ data, setData }) => (
                     />
                 </div>
                 <div className="form-field">
-                    <label className="small-label">PÓS-REFEIÇÃO</label>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="small-label">PÓS-REFEIÇÃO</label>
+                        <InfoTooltip {...FIELD_EXPLANATIONS.targetPostMeal} />
+                    </div>
                     <input
                         type="number"
                         value={data.targetGlucosePostMeal || '140'}

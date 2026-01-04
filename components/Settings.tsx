@@ -430,6 +430,32 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                             </div>
                         </div>
 
+                        <div>
+                            <div className="flex items-center">
+                                <InputGroup
+                                    label="Marca da Rápida (Bolus)"
+                                    value={localUser.bolusInsulin?.brand || ''}
+                                    onChange={(v) => {
+                                        if (!localUser) return;
+                                        setLocalUser({
+                                            ...localUser,
+                                            bolusInsulin: { ...localUser.bolusInsulin, brand: v }
+                                        });
+                                    }}
+                                    editing={editMode === 'bolusBrand'}
+                                    onEdit={() => setEditMode('bolusBrand')}
+                                    onSave={handleSaveProfile}
+                                    onCancel={handleCancel}
+                                    saving={saving}
+                                    placeholder="Ex: Humalog, NovoRapid, Fiasp"
+                                />
+                                <InfoTooltip
+                                    title="Marca da Insulina Rápida (Bolus)"
+                                    content="Nome da sua insulina de ação rápida (bolus), usada nas refeições.\n\n💉 Exemplos comuns:\n• Humalog (lispro)\n• NovoRapid (aspart)\n• Fiasp (aspart ultra-rápida)\n• Apidra (glulisina)\n\n📝 Ajuda a IA a entender seu tratamento completo e fazer sugestões mais personalizadas."
+                                />
+                            </div>
+                        </div>
+
                         <div className="bg-white/5 rounded-xl p-3">
                             <p className="text-xs text-[#b3ffd2] mb-2">💡 Dica</p>
                             <p className="text-xs text-white/80">
