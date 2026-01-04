@@ -140,13 +140,21 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
 
             // FIX DEFINITIVO: SCHEMA REAL DO SUPABASE
             // Colunas SQL que EXISTEM na tabela profiles
+
+            // Validar e limpar telefone antes de salvar
+            let cleanPhone = localUser.phone?.replace(/\D/g, '') || '';
+
+            // Se telefone for inválido (< 10 dígitos), não enviar para o banco
+            // Isso previne erro de constraint phone_not_empty
+            const phoneToSave = (cleanPhone.length >= 10) ? cleanPhone : undefined;
+
             const { error: updateError } = await supabase
                 .from('profiles')
                 .upsert({
                     // --- COLUNAS SQL (Nível 1) ---
                     id: authUser.id,
                     name: localUser.name,
-                    phone: localUser.phone,
+                    ...(phoneToSave && { phone: phoneToSave }), // Só inclui se válido
                     email: authUser.email,
                     target_glucose_min: localUser.targetGlucosePreMeal,
                     target_glucose_max: localUser.targetGlucosePostMeal,
@@ -155,6 +163,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     // --- COFRE JSON (Nível 2 - Todo o resto) ---
                     medical_data: {
                         ...localUser,
+                        phone: phoneToSave || localUser.phone, // Salva no JSON também
                         weight: localUser.weight,
                         height: localUser.height,
                         notificationSettings: localUser.notificationSettings,
