@@ -693,24 +693,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, session }) => {
                 </main>
             </>
 
-            {/* Floating Dock */}
-            <div className={`fixed bottom-6 w-full max-w-lg mx-auto pointer-events-none flex justify-center z-40 left-0 right-0 ${activeScreen !== 'dashboard' ? 'hidden' : ''}`}>
-                <div className="flex items-center justify-between w-[90%] bg-[#CCFBF1]/90 backdrop-blur-xl px-6 py-3 rounded-[2.5rem] shadow-2xl shadow-[#18A6A4]/15 border border-white/50 pointer-events-auto">
-                    <button onClick={() => setActiveScreen('glucose')} className="group relative w-16 h-16 flex items-center justify-center transition-all hover:-translate-y-2 active:scale-95 bg-white/40 rounded-full shadow-sm">
-                        <div className="absolute -bottom-8 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-md shadow-sm">Glicemia</div>
-                        <img src="https://i.ibb.co/b4btFQd/Design-sssnome.png" alt="Glicemia 3D" className="w-12 h-12 object-contain filter drop-shadow-sm" />
+
+            {/* Bottom Navigation Bar - Mobile Style */}
+            <div className={`fixed bottom-0 left-0 right-0 w-full bg-[#CCFBF1] border-t-2 border-[#029491]/20 z-40 ${activeScreen !== 'dashboard' ? 'hidden' : ''}`}>
+                <div className="max-w-lg mx-auto flex items-center justify-around px-4 py-3">
+                    <button
+                        onClick={() => setActiveScreen('glucose')}
+                        className="group flex flex-col items-center justify-center gap-1 transition-all active:scale-95 flex-1"
+                    >
+                        <div className="w-14 h-14 flex items-center justify-center bg-white/60 shadow-sm transition-all group-hover:bg-white group-hover:shadow-md">
+                            <img src="https://i.ibb.co/b4btFQd/Design-sssnome.png" alt="Glicemia" className="w-10 h-10 object-contain" />
+                        </div>
+                        <span className="text-[10px] font-semibold text-[#029491] uppercase tracking-wide">Glicemia</span>
                     </button>
-                    <button onClick={() => setActiveScreen('insulin')} className="group relative w-16 h-16 flex items-center justify-center transition-all hover:-translate-y-2 active:scale-95 bg-white/40 rounded-full shadow-sm">
-                        <div className="absolute -bottom-8 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-md shadow-sm">Insulina</div>
-                        <img src="https://i.ibb.co/0S6rDfn/dd.png" alt="Insulina 3D" className="w-12 h-12 object-contain filter drop-shadow-sm" />
+
+                    <button
+                        onClick={() => setActiveScreen('insulin')}
+                        className="group flex flex-col items-center justify-center gap-1 transition-all active:scale-95 flex-1"
+                    >
+                        <div className="w-14 h-14 flex items-center justify-center bg-white/60 shadow-sm transition-all group-hover:bg-white group-hover:shadow-md">
+                            <img src="https://i.ibb.co/0S6rDfn/dd.png" alt="Insulina" className="w-10 h-10 object-contain" />
+                        </div>
+                        <span className="text-[10px] font-semibold text-[#029491] uppercase tracking-wide">Insulina</span>
                     </button>
-                    <button onClick={() => setActiveScreen('meals')} className="group relative w-16 h-16 flex items-center justify-center transition-all hover:-translate-y-2 active:scale-95 bg-white/40 rounded-full shadow-sm">
-                        <div className="absolute -bottom-8 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-md shadow-sm">Refeição</div>
-                        <img src="https://i.ibb.co/0yPR8hDC/Design-sem-nome-1.png" alt="Refeição 3D" className="w-12 h-12 object-contain filter drop-shadow-sm" />
+
+                    <button
+                        onClick={() => setActiveScreen('meals')}
+                        className="group flex flex-col items-center justify-center gap-1 transition-all active:scale-95 flex-1"
+                    >
+                        <div className="w-14 h-14 flex items-center justify-center bg-white/60 shadow-sm transition-all group-hover:bg-white group-hover:shadow-md">
+                            <img src="https://i.ibb.co/0yPR8hDC/Design-sem-nome-1.png" alt="Refeição" className="w-10 h-10 object-contain" />
+                        </div>
+                        <span className="text-[10px] font-semibold text-[#029491] uppercase tracking-wide">Refeição</span>
                     </button>
-                    <button onClick={() => setActiveScreen('settings')} className="group relative w-16 h-16 flex items-center justify-center transition-all hover:-translate-y-2 active:scale-95 bg-white/40 rounded-full shadow-sm">
-                        <div className="absolute -bottom-8 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-md shadow-sm">Ajustes</div>
-                        <img src="https://i.ibb.co/Vptysv4v/Design-config-nome-4.png" alt="Config 3D" className="w-12 h-12 object-contain filter drop-shadow-sm" />
+
+                    <button
+                        onClick={() => setActiveScreen('settings')}
+                        className="group flex flex-col items-center justify-center gap-1 transition-all active:scale-95 flex-1"
+                    >
+                        <div className="w-14 h-14 flex items-center justify-center bg-white/60 shadow-sm transition-all group-hover:bg-white group-hover:shadow-md">
+                            <img src="https://i.ibb.co/Vptysv4v/Design-config-nome-4.png" alt="Ajustes" className="w-12 h-12 object-contain" />
+                        </div>
+                        <span className="text-[10px] font-semibold text-[#029491] uppercase tracking-wide">Ajustes</span>
                     </button>
                 </div>
             </div>
