@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Heart, Activity, Droplet, Syringe, Utensils, Pill, Stethoscope, Clock } from 'lucide-react';
-import { InfoTooltip } from './ui/InfoTooltip';
+import { InfoTooltip, FIELD_EXPLANATIONS } from './InfoTooltip';
 import { PillTag } from './ui/PillTag';
 import { CustomSelect } from './ui/CustomSelect';
 

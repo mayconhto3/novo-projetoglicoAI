@@ -5,6 +5,7 @@ import {
     ArrowLeft, User, Activity, Bell, Syringe,
     Save, X, Edit2, Check, AlertCircle, ChevronDown, ChevronRight
 } from 'lucide-react';
+import { InfoTooltip, FIELD_EXPLANATIONS } from './InfoTooltip';
 
 interface SettingsProps {
     onBack: () => void;
@@ -383,34 +384,51 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     onToggle={() => toggleSection('insulin')}
                 >
                     <div className="space-y-4">
-                        <RadioGroup
-                            label="Método de Aplicação"
-                            options={[
-                                { value: 'Caneta', label: 'Caneta', icon: '💉' },
-                                { value: 'Seringa', label: 'Seringa', icon: '🩸' },
-                                { value: 'Bomba', label: 'Bomba', icon: '⚙️' }
-                            ]}
-                            value={localUser.insulinMethod || 'Caneta'}
-                            onChange={(v) => updateLocalField('insulinMethod', v)}
-                        />
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-white text-sm font-medium">Método de Aplicação</label>
+                                <InfoTooltip {...FIELD_EXPLANATIONS.insulinMethod} />
+                            </div>
+                            <RadioGroup
+                                label=""
+                                options={[
+                                    { value: 'Caneta', label: 'Caneta', icon: '💉' },
+                                    { value: 'Seringa', label: 'Seringa', icon: '🩸' },
+                                    { value: 'Bomba', label: 'Bomba', icon: '⚙️' }
+                                ]}
+                                value={localUser.insulinMethod || 'Caneta'}
+                                onChange={(v) => updateLocalField('insulinMethod', v)}
+                            />
+                        </div>
 
-                        <StepSelector
-                            label="Precisão da Dose"
-                            value={localUser.insulinStep || 1.0}
-                            onChange={(v) => updateLocalField('insulinStep', v)}
-                        />
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-white text-sm font-medium">Precisão da Dose</label>
+                                <InfoTooltip {...FIELD_EXPLANATIONS.insulinStep} />
+                            </div>
+                            <StepSelector
+                                label=""
+                                value={localUser.insulinStep || 1.0}
+                                onChange={(v) => updateLocalField('insulinStep', v)}
+                            />
+                        </div>
 
-                        <InputGroup
-                            label="Marca da Basal"
-                            value={localUser.basalInsulin?.brand || ''}
-                            onChange={(v) => updateBasalField('brand', v)}
-                            editing={editMode === 'basalBrand'}
-                            onEdit={() => setEditMode('basalBrand')}
-                            onSave={handleSaveProfile}
-                            onCancel={handleCancel}
-                            saving={saving}
-                            placeholder="Ex: Lantus, Tresiba, Levemir"
-                        />
+                        <div>
+                            <div className="flex items-center">
+                                <InputGroup
+                                    label="Marca da Basal"
+                                    value={localUser.basalInsulin?.brand || ''}
+                                    onChange={(v) => updateBasalField('brand', v)}
+                                    editing={editMode === 'basalBrand'}
+                                    onEdit={() => setEditMode('basalBrand')}
+                                    onSave={handleSaveProfile}
+                                    onCancel={handleCancel}
+                                    saving={saving}
+                                    placeholder="Ex: Lantus, Tresiba, Levemir"
+                                />
+                                <InfoTooltip {...FIELD_EXPLANATIONS.basalBrand} />
+                            </div>
+                        </div>
 
                         <div className="bg-white/5 rounded-xl p-3">
                             <p className="text-xs text-[#b3ffd2] mb-2">💡 Dica</p>
@@ -432,33 +450,43 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                     onToggle={() => toggleSection('targets')}
                 >
                     <div className="space-y-4">
-                        <InputGroup
-                            label="Meta Glicêmica Pré-Refeição"
-                            value={localUser.targetGlucosePreMeal.toString()}
-                            onChange={(v) => updateLocalField('targetGlucosePreMeal', parseInt(v) || 90)}
-                            editing={editMode === 'targetPre'}
-                            onEdit={() => setEditMode('targetPre')}
-                            onSave={handleSaveProfile}
-                            onCancel={handleCancel}
-                            saving={saving}
-                            type="number"
-                            unit="mg/dL"
-                            placeholder="90"
-                        />
+                        <div>
+                            <div className="flex items-center">
+                                <InputGroup
+                                    label="Meta Glicêmica Pré-Refeição"
+                                    value={localUser.targetGlucosePreMeal.toString()}
+                                    onChange={(v) => updateLocalField('targetGlucosePreMeal', parseInt(v) || 90)}
+                                    editing={editMode === 'targetPre'}
+                                    onEdit={() => setEditMode('targetPre')}
+                                    onSave={handleSaveProfile}
+                                    onCancel={handleCancel}
+                                    saving={saving}
+                                    type="number"
+                                    unit="mg/dL"
+                                    placeholder="90"
+                                />
+                                <InfoTooltip {...FIELD_EXPLANATIONS.targetPreMeal} />
+                            </div>
+                        </div>
 
-                        <InputGroup
-                            label="Meta Glicêmica Pós-Refeição"
-                            value={localUser.targetGlucosePostMeal.toString()}
-                            onChange={(v) => updateLocalField('targetGlucosePostMeal', parseInt(v) || 180)}
-                            editing={editMode === 'targetPost'}
-                            onEdit={() => setEditMode('targetPost')}
-                            onSave={handleSaveProfile}
-                            onCancel={handleCancel}
-                            saving={saving}
-                            type="number"
-                            unit="mg/dL"
-                            placeholder="180"
-                        />
+                        <div>
+                            <div className="flex items-center">
+                                <InputGroup
+                                    label="Meta Glicêmica Pós-Refeição"
+                                    value={localUser.targetGlucosePostMeal.toString()}
+                                    onChange={(v) => updateLocalField('targetGlucosePostMeal', parseInt(v) || 180)}
+                                    editing={editMode === 'targetPost'}
+                                    onEdit={() => setEditMode('targetPost')}
+                                    onSave={handleSaveProfile}
+                                    onCancel={handleCancel}
+                                    saving={saving}
+                                    type="number"
+                                    unit="mg/dL"
+                                    placeholder="180"
+                                />
+                                <InfoTooltip {...FIELD_EXPLANATIONS.targetPostMeal} />
+                            </div>
+                        </div>
                     </div>
                 </AccordionSection>
 
@@ -670,7 +698,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                 </AccordionSection>
 
                 {/* Botão Salvar Fixo (se houver mudanças) */}
-                {isDirty && editMode && (
+                {isDirty && (
                     <div className="fixed bottom-20 left-0 right-0 p-4 bg-white/10 backdrop-blur-sm">
                         <div className="flex gap-3">
                             <button
