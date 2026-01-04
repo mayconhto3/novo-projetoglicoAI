@@ -3,6 +3,7 @@ import { supabase } from './services/supabaseClient';
 // OS-16: Premium UX Components (Big Switch - 2026-01-03)
 import { LoginPremium } from './components/LoginPremium';
 import { QuestionnaireWizard } from './components/QuestionnaireWizard';
+import { ActivationPage } from './pages/activation';
 // Backup: Auth e Questionnaire antigos mantidos em App.backup.tsx
 import { Dashboard } from './components/Dashboard';
 import { UserProfile } from './types';
@@ -14,6 +15,7 @@ const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsActivation, setNeedsActivation] = useState(false); // Controla tela de ativação
 
   // Função auxiliar para logout limpo
   const handleForceLogout = async () => {
@@ -145,21 +147,13 @@ const App: React.FC = () => {
       // 4. Marcar tarefa básica como completa
       await GamificationService.completeProfileTask(session.user.id, 'basic_info');
 
-      // 5. Trigger N8N Webhook (Welcome Message)
-      const webhookUrl = 'https://toothlessgreenlandshark-n8n.cloudfy.live/webhook/novo-cadastro';
+      // 5. Redirecionar para tela de ativação
+      // ❌ NÃO enviamos mais webhook automático
+      // ✅ Usuário inicia conversa via deep link (grátis, sem bloqueio)
 
-      fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          number: cleanNumber,
-          name: profile.name,
-          source: 'full_onboarding'
-        })
-      }).catch(err => console.warn('Failed to trigger onboarding webhook:', err));
-
-      // 6. Atualizar estado
+      // 6. Atualizar estado e marcar que precisa ativar
       setUserProfile(profile);
+      setNeedsActivation(true); // Mostra tela de ativação
     } catch (error: any) {
       alert('Erro ao salvar perfil: ' + error.message);
     } finally {
@@ -183,6 +177,8 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       {!userProfile ? (
         <QuestionnaireWizard onComplete={handleOnboardingComplete} />
+      ) : needsActivation ? (
+        <ActivationPage />
       ) : (
         <>
           <NotificationManager user={userProfile} />

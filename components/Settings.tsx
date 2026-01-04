@@ -3,7 +3,7 @@ import { supabase } from '../services/supabaseClient';
 import { UserProfile } from '../types';
 import {
     ArrowLeft, User, Activity, Bell, Syringe,
-    Save, X, Edit2, Check, AlertCircle, ChevronDown, ChevronRight
+    Save, X, Edit2, Check, AlertCircle, ChevronDown, ChevronRight, MessageCircle
 } from 'lucide-react';
 import { InfoTooltip, FIELD_EXPLANATIONS } from './InfoTooltip';
 import { CustomSelect } from './ui/CustomSelect';
@@ -880,6 +880,75 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                         </div>
                     </div>
                 )}
+
+                {/* WhatsApp - Falar com a IA */}
+                <AccordionSection
+                    id="whatsapp"
+                    title="FALAR COM A IA"
+                    icon={<MessageCircle size={20} />}
+                    isOpen={openSection === 'whatsapp'}
+                    onToggle={() => toggleSection('whatsapp')}
+                >
+                    <div className="space-y-4">
+                        <p className="text-white/80 text-sm leading-relaxed">
+                            Converse com sua assistente de diabetes pelo WhatsApp. Envie fotos de refeições, glicosímetro ou tire dúvidas.
+                        </p>
+
+                        <a
+                            href="https://wa.me/5563981399119"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition-all text-center shadow-lg hover:shadow-xl transform hover:scale-105"
+                        >
+                            <div className="flex items-center justify-center gap-2">
+                                <MessageCircle size={20} />
+                                <span>Abrir WhatsApp</span>
+                            </div>
+                        </a>
+
+                        <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
+                            <p className="text-white/60 text-xs">
+                                📱 Número: <span className="font-mono text-white/80">+55 63 98139-9119</span>
+                            </p>
+                        </div>
+                    </div>
+                </AccordionSection>
+
+                {/* Legal Pages Footer */}
+                <div className="mt-8 pb-6 px-6 space-y-3">
+                    <div className="text-center text-white/40 text-xs uppercase tracking-wider mb-3">
+                        Informações Legais
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <a
+                            href="/legal/termos-de-uso"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-white/5 hover:bg-white/10 text-white text-center py-3 px-4 rounded-lg transition-all"
+                        >
+                            📜 Termos de Uso
+                        </a>
+                        <a
+                            href="/legal/politica-privacidade"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-white/5 hover:bg-white/10 text-white text-center py-3 px-4 rounded-lg transition-all"
+                        >
+                            🔒 Política de Privacidade
+                        </a>
+                        <a
+                            href="/legal/aviso-medico"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-white/5 hover:bg-white/10 text-white text-center py-3 px-4 rounded-lg transition-all"
+                        >
+                            ⚕️ Aviso Médico
+                        </a>
+                    </div>
+                    <div className="text-center text-white/30 text-xs mt-4">
+                        © 2026 GlucoAI - Todos os direitos reservados
+                    </div>
+                </div>
             </div>
         </div>
     );
