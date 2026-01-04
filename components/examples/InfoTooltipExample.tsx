@@ -77,7 +77,7 @@ export const QuestionnaireFieldExample = () => {
                 </select>
             </div>
 
-            <style jsx>{`
+            <style>{`
         .form-section {
           max-width: 600px;
           margin: 0 auto;

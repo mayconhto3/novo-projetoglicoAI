@@ -7,79 +7,79 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
 interface CustomSelectProps {
-    value: string;
-    onChange: (value: string) => void;
-    options: { value: string; label: string }[];
-    placeholder?: string;
-    label?: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+  label?: string;
 }
 
 export const CustomSelect: React.FC<CustomSelectProps> = ({
-    value,
-    onChange,
-    options,
-    placeholder = 'Selecione...',
-    label
+  value,
+  onChange,
+  options,
+  placeholder = 'Selecione...',
+  label
 }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const selectRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement>(null);
 
-    // Fechar ao clicar fora
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
+  // Fechar ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find(opt => opt.value === value);
 
-    return (
-        <div className="custom-select-wrapper">
-            {label && <label className="select-label">{label}</label>}
+  return (
+    <div className="custom-select-wrapper">
+      {label && <label className="select-label">{label}</label>}
 
-            <div
-                ref={selectRef}
-                className={`custom-select ${isOpen ? 'open' : ''}`}
-                onClick={() => setIsOpen(!isOpen)}
-            >
-                <div className="select-trigger">
-                    <span className={value ? 'selected-text' : 'placeholder-text'}>
-                        {selectedOption?.label || placeholder}
-                    </span>
-                    <ChevronDown
-                        size={20}
-                        className={`chevron-icon ${isOpen ? 'rotated' : ''}`}
-                    />
-                </div>
+      <div
+        ref={selectRef}
+        className={`custom-select ${isOpen ? 'open' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="select-trigger">
+          <span className={value ? 'selected-text' : 'placeholder-text'}>
+            {selectedOption?.label || placeholder}
+          </span>
+          <ChevronDown
+            size={20}
+            className={`chevron-icon ${isOpen ? 'rotated' : ''}`}
+          />
+        </div>
 
-                {isOpen && (
-                    <div className="select-dropdown">
-                        {options.map((option) => (
-                            <div
-                                key={option.value}
-                                className={`select-option ${option.value === value ? 'selected' : ''}`}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onChange(option.value);
-                                    setIsOpen(false);
-                                }}
-                            >
-                                <span>{option.label}</span>
-                                {option.value === value && (
-                                    <Check size={16} className="check-icon" />
-                                )}
-                            </div>
-                        ))}
-                    </div>
+        {isOpen && (
+          <div className="select-dropdown">
+            {options.map((option) => (
+              <div
+                key={option.value}
+                className={`select-option ${option.value === value ? 'selected' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+              >
+                <span>{option.label}</span>
+                {option.value === value && (
+                  <Check size={16} className="check-icon" />
                 )}
-            </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-            <style jsx>{`
+      <style>{`
         .custom-select-wrapper {
           width: 100%;
         }
@@ -244,6 +244,6 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           }
         }
       `}</style>
-        </div>
-    );
+    </div>
+  );
 };

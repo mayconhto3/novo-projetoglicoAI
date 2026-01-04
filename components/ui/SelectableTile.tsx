@@ -51,7 +51,7 @@ export const SelectableTile: React.FC<SelectableTileProps> = ({
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .selectable-tile {
           position: relative;
           display: flex;

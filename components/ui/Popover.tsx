@@ -86,7 +86,7 @@ export const Popover: React.FC<PopoverProps> = ({
                 {children}
             </div>
 
-            <style jsx>{`
+            <style>{`
         .popover {
           position: absolute;
           top: calc(100% + 8px);

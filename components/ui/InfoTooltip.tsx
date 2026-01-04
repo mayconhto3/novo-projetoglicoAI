@@ -56,7 +56,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({ tooltipKey, className 
                 </Popover>
             )}
 
-            <style jsx>{`
+            <style>{`
         .info-tooltip-trigger {
           background: none;
           border: none;
@@ -105,7 +105,7 @@ const TooltipContent: React.FC<{ data: TooltipData }> = ({ data }) => {
                 </div>
             )}
 
-            <style jsx>{`
+            <style>{`
         .tooltip-content {
           font-size: var(--font-size-sm);
           line-height: var(--line-height-relaxed);

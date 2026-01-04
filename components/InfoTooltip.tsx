@@ -117,7 +117,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({ title, content }) => {
             )}
 
             {/* CSS Animation */}
-            <style jsx>{`
+            <style>{`
                 @keyframes slide-up {
                     from {
                         transform: translateY(100%);

@@ -73,7 +73,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                 </div>
             </div>
 
-            <style jsx>{`
+            <style>{`
         .bottom-sheet-backdrop {
           position: fixed;
           inset: 0;

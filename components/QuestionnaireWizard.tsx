@@ -343,7 +343,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({ onComp
                 )}
             </div>
 
-            <style jsx>{`
+            <style>{`
         .wizard-container {
           min-height: 100vh;
           background: linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%);

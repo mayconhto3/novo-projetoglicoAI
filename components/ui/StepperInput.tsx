@@ -99,7 +99,7 @@ export const StepperInput: React.FC<StepperInputProps> = ({
                 <p className="stepper-help">{helpText}</p>
             )}
 
-            <style jsx>{`
+            <style>{`
         .stepper-container {
           display: flex;
           flex-direction: column;

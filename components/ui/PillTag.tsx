@@ -20,7 +20,7 @@ export const PillTag: React.FC<PillTagProps> = ({ label, isSelected, onClick }) 
     >
       {label}
 
-      <style jsx>{`
+      <style>{`
         .pill-tag {
           display: inline-flex;
           align-items: center;

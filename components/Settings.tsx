@@ -33,35 +33,50 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                 return;
             }
 
+            // FIX 406: Usamos .limit(1) em vez de .maybeSingle()
+            // Isso usa header application/json padrão, que aceita [] sem erro HTTP
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', authUser.id)
-                .single();
+                .limit(1);
 
             if (error) throw error;
 
+            // data é um array, pegamos o primeiro elemento (se existir)
+            const profileData = (data && data.length > 0) ? data[0] : {};
+
             const profile: UserProfile = {
-                ...data.medical_data,
-                name: data.name || '',
-                email: data.email || authUser.email || '',
-                phone: data.phone || '',
-                weight: data.weight || data.medical_data?.weight || 0,
-                height: data.medical_data?.height || 0,
-                targetGlucosePreMeal: data.target_glucose_min || data.medical_data?.targetGlucosePreMeal || 90,
-                targetGlucosePostMeal: data.target_glucose_max || data.medical_data?.targetGlucosePostMeal || 180,
-                notificationSettings: data.notification_settings || {
+                // Spread seguro do medical_data (se existir)
+                ...(profileData.medical_data || {}),
+
+                // Campos Raiz com Fallback
+                name: profileData.name || '',
+                email: profileData.email || authUser.email || '',
+                phone: profileData.phone || '',
+
+                // Defaults de Segurança
+                weight: profileData.weight || profileData.medical_data?.weight || 0,
+                height: profileData.medical_data?.height || 0,
+                targetGlucosePreMeal: profileData.target_glucose_min || profileData.medical_data?.targetGlucosePreMeal || 90,
+                targetGlucosePostMeal: profileData.target_glucose_max || profileData.medical_data?.targetGlucosePostMeal || 180,
+                notificationSettings: profileData.notification_settings || {
                     meals: true,
                     medication: true,
                     glucose: true,
                     whatsapp: true
                 },
-                // Novos campos OS-08
-                insulinMethod: data.medical_data?.insulinMethod || 'Caneta',
-                insulinStep: data.medical_data?.insulinStep || 1.0,
+
+                // Campos de Insulina (Garante defaults para evitar UI quebrada)
+                insulinMethod: profileData.medical_data?.insulinMethod || 'Caneta',
+                insulinStep: profileData.medical_data?.insulinStep || 1.0,
                 basalInsulin: {
-                    ...data.medical_data?.basalInsulin,
-                    brand: data.medical_data?.basalInsulin?.brand || ''
+                    brand: '',
+                    ...(profileData.medical_data?.basalInsulin || {})
+                },
+                bolusInsulin: {
+                    brand: '',
+                    ...(profileData.medical_data?.bolusInsulin || {})
                 }
             };
 
@@ -122,34 +137,35 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
             const { data: { user: authUser } } = await supabase.auth.getUser();
             if (!authUser) throw new Error('Não autenticado');
 
-            // 🔄 DUAL WRITE: Atualiza SQL + JSON
+            // FIX CRÍTICO: UPSERT + SCHEMA CORRETO
+            // Salvamos apenas colunas SQL reais na raiz. O resto vai para medical_data.
             const { error: updateError } = await supabase
                 .from('profiles')
-                .update({
+                .upsert({
+                    id: authUser.id,
                     name: localUser.name,
                     phone: localUser.phone,
-                    weight: localUser.weight,
-                    height: localUser.height,
                     target_glucose_min: localUser.targetGlucosePreMeal,
                     target_glucose_max: localUser.targetGlucosePostMeal,
-                    notification_settings: localUser.notificationSettings,
-                    // ✅ CRÍTICO: Atualizar medical_data completo
+                    updated_at: new Date().toISOString(),
+
+                    // O GRANDE TRUQUE: Tudo que dava erro de coluna vai encapsulado aqui
                     medical_data: {
                         ...localUser,
                         weight: localUser.weight,
                         height: localUser.height,
-                        targetGlucosePreMeal: localUser.targetGlucosePreMeal,
-                        targetGlucosePostMeal: localUser.targetGlucosePostMeal,
-                        // OS-08: Novos campos
+                        notificationSettings: localUser.notificationSettings,
                         insulinMethod: localUser.insulinMethod,
                         insulinStep: localUser.insulinStep,
-                        basalInsulin: {
-                            ...localUser.basalInsulin
-                        }
-                    },
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', authUser.id);
+                        basalInsulin: localUser.basalInsulin,
+                        bolusInsulin: localUser.bolusInsulin,
+                        diabetesMeds: localUser.diabetesMeds || [],
+                        glycemicMeds: localUser.glycemicMeds || [],
+                        comorbidities: localUser.comorbidities || [],
+                        communicationStyle: localUser.communicationStyle || 'Amigável',
+                        mealTimes: localUser.mealTimes || { breakfast: '08:00', lunch: '12:00', dinner: '19:00' }
+                    }
+                });
 
             if (updateError) throw updateError;
 

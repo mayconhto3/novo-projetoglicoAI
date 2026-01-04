@@ -84,22 +84,24 @@ const App: React.FC = () => {
 
   const fetchProfile = async (userId: string) => {
     try {
+      // FIX 406: Usamos .limit(1) em vez de .single()
+      // Isso usa header application/json padrão, que aceita [] sem erro HTTP
       const { data, error } = await supabase
         .from('profiles')
         .select('medical_data')
         .eq('id', userId)
-        .single();
+        .limit(1);
 
       if (error) {
-        if (error.code !== 'PGRST116') { // PGRST116 é "Row not found"
-          console.error('Error fetching profile:', error);
-        }
-        // Se não achar perfil, não é erro fatal, apenas o usuário precisa preencher o questionário
+        console.error('Error fetching profile:', error);
+        return;
       }
 
-      if (data && data.medical_data) {
-        setUserProfile(data.medical_data as UserProfile);
+      // data é um array, pegamos o primeiro elemento (se existir)
+      if (data && data.length > 0 && data[0].medical_data) {
+        setUserProfile(data[0].medical_data as UserProfile);
       }
+      // Se data for [], não é erro, apenas significa que o perfil não existe ainda
     } catch (error) {
       console.error("Unexpected error:", error);
     } finally {
