@@ -144,13 +144,14 @@ export async function checkGatekeeper(
         if (now > trialEnds) {
             console.log(`[Gatekeeper] Trial vencido para user ${profile.id || 'unknown'}`);
 
-            // Atualizar status no banco (Fire and Forget)
-            supabase
+            // ✅ FIX: Aguardar atualização de status
+            await supabase
                 .from('profiles')
                 .update({ subscription_status: 'expired' })
                 .eq('id', profile.id)
-                .then(() => console.log('[Gatekeeper] Status atualizado para expired'))
                 .catch((err: any) => console.error('[Gatekeeper] Erro ao atualizar status:', err));
+
+            console.log('[Gatekeeper] Status atualizado para expired');
 
             return {
                 allowed: false,
@@ -207,12 +208,14 @@ export async function checkGatekeeper(
     // 6. SALVAR STATS NO BANCO (Fire and Forget - não bloqueia resposta)
     // ============================================================================
 
-    supabase
+    // ✅ FIX: Aguardar salvamento de stats
+    await supabase
         .from('profiles')
         .update({ usage_stats: stats })
         .eq('id', profile.id)
-        .then(() => console.log(`[Gatekeeper] Stats salvos: ${JSON.stringify(stats)}`))
         .catch((err: any) => console.error('[Gatekeeper] Erro ao salvar stats:', err));
+
+    console.log(`[Gatekeeper] Stats salvos: ${JSON.stringify(stats)}`);
 
     // ============================================================================
     // 7. LIBERADO - RETORNAR SUCESSO

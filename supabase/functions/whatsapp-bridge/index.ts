@@ -780,7 +780,8 @@ serve(async (req) => {
     // ❌ BLOCO REMOVIDO: Insert de glucose_readings (Causava duplicidade)
     // ❌ BLOCO REMOVIDO: Insert de insulin_history (Causava duplicidade)
 
-    Promise.all(savePromises).catch(err => console.error("Erro ao salvar histórico:", err));
+    // ✅ FIX: Aguardar salvamento de histórico antes de retornar resposta
+    await Promise.all(savePromises).catch(err => console.error("Erro ao salvar histórico:", err));
 
     return new Response(JSON.stringify({
       number: cleanInputPhone,

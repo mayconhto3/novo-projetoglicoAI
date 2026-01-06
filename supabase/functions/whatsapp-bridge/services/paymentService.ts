@@ -71,13 +71,14 @@ export async function createCheckoutSession(
             customerId = customer.id;
             console.log(`[Payment] Customer criado: ${customerId}`);
 
-            // Salvar no banco (Fire and Forget)
-            supabase
+            // ✅ FIX: Aguardar salvamento antes de continuar
+            await supabase
                 .from('profiles')
                 .update({ stripe_customer_id: customerId })
                 .eq('id', userId)
-                .then(() => console.log('[Payment] stripe_customer_id salvo'))
                 .catch((err: any) => console.error('[Payment] Erro ao salvar customer_id:', err));
+
+            console.log('[Payment] stripe_customer_id salvo');
         } else {
             console.log(`[Payment] Customer existente: ${customerId}`);
         }
