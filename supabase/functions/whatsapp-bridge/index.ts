@@ -726,22 +726,22 @@ serve(async (req) => {
         }
       });
 
-      // Contexto para a IA
+      // ✅ CORREÇÃO: Instrução neutra do sistema, não texto falso do usuário
       if (processedMedia.mimeType.startsWith("image")) {
         promptParts.push({
           text: message
             ? `[FOTO] Contexto: ${message}. Identifique os alimentos, estime carboidratos e sugira insulina.`
-            : `[FOTO DA REFEIÇÃO] Identifique os alimentos, estime os carboidratos totais e verifique se preciso de insulina.`
+            : `[SISTEMA: O usuário enviou uma imagem sem legenda. Analise se é um glicosímetro (extraia o valor) ou uma refeição (estime carboidratos).]`
         });
       } else if (processedMedia.mimeType.startsWith("audio")) {
         promptParts.push({
           text: message
             ? `[ÁUDIO] Contexto: ${message}`
-            : `[ÁUDIO DO USUÁRIO] Transcreva e responda.`
+            : `[SISTEMA: O usuário enviou um áudio sem legenda. Transcreva e responda.]`
         });
       }
     } else {
-      promptParts.push({ text: message || "Oi" });
+      promptParts.push({ text: message || "." });
     }
 
     // 4. Geração e Chamada
