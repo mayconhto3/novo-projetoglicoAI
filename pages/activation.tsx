@@ -1,9 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { MessageCircle, ArrowRight, Check } from 'lucide-react';
 
-export const ActivationPage: React.FC = () => {
-    const navigate = useNavigate();
+export const ActivationPage: React.FC<{ onSkip?: () => void }> = ({ onSkip }) => {
 
     // Configurações do WhatsApp
     const WHATSAPP_NUMBER = '5563981399119';
@@ -37,7 +35,7 @@ export const ActivationPage: React.FC = () => {
                 >
                     <div className="flex items-center justify-center gap-3">
                         <MessageCircle size={24} />
-                        <span>ATIVAR GLUCOAI NO WHATSAPP</span>
+                        <span>ATIVAR GLICIE NO WHATSAPP</span>
                     </div>
                 </a>
 
@@ -50,7 +48,7 @@ export const ActivationPage: React.FC = () => {
 
                 {/* Secondary CTA */}
                 <button
-                    onClick={() => navigate('/dashboard')}
+                    onClick={onSkip}
                     className="w-full text-white/60 hover:text-white py-3 transition-all flex items-center justify-center gap-2 group"
                 >
                     <span>Já ativei / Ir para Dashboard</span>

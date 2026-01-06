@@ -35,7 +35,7 @@ export default function AvisoMedico() {
                         <AlertTriangle className="text-red-600 flex-shrink-0" size={48} />
                         <div>
                             <h2 className="text-2xl font-bold text-red-900 mb-2">
-                                O GlucoAI NÃO É UM MÉDICO
+                                A Glicie NÃO É UM MÉDICO
                             </h2>
                             <p className="text-red-800 text-lg">
                                 Este serviço é uma <strong>ferramenta educativa</strong> baseada em Inteligência
@@ -48,7 +48,7 @@ export default function AvisoMedico() {
                 <div className="prose prose-teal max-w-none">
                     <h2>1. Natureza do Serviço</h2>
                     <p>
-                        O GlucoAI utiliza Inteligência Artificial (IA) para fornecer <strong>sugestões
+                        A Glicie utiliza Inteligência Artificial (IA) para fornecer <strong>sugestões
                             educativas</strong> sobre:
                     </p>
                     <ul>
@@ -76,7 +76,7 @@ export default function AvisoMedico() {
                     </div>
 
                     <h2>3. Suas Responsabilidades</h2>
-                    <p>Ao usar o GlucoAI, você concorda em:</p>
+                    <p>Ao usar a Glicie, você concorda em:</p>
                     <ol>
                         <li>
                             <strong>Conferir Manualmente:</strong> Sempre verificar os cálculos sugeridos
@@ -100,7 +100,7 @@ export default function AvisoMedico() {
                         </li>
                     </ol>
 
-                    <h2>4. O que o GlucoAI NÃO Faz</h2>
+                    <h2>4. O que a Glicie NÃO Faz</h2>
                     <ul>
                         <li>❌ NÃO diagnostica diabetes ou outras condições médicas</li>
                         <li>❌ NÃO prescreve medicamentos ou tratamentos</li>
@@ -121,7 +121,7 @@ export default function AvisoMedico() {
 
                     <h2>6. Limitação de Responsabilidade</h2>
                     <p className="bg-gray-100 border-l-4 border-gray-500 p-4">
-                        O GlucoAI e seus desenvolvedores <strong>NÃO se responsabilizam</strong> por:
+                        A Glicie e seus desenvolvedores <strong>NÃO se responsabilizam</strong> por:
                     </p>
                     <ul>
                         <li>Decisões médicas tomadas com base nas sugestões da IA</li>
@@ -133,7 +133,7 @@ export default function AvisoMedico() {
 
                     <h2>7. Uso Educativo e Informativo</h2>
                     <p>
-                        O GlucoAI deve ser usado exclusivamente como:
+                        A Glicie deve ser usada exclusivamente como:
                     </p>
                     <ul>
                         <li>✅ Ferramenta educativa para aprender sobre diabetes</li>
@@ -144,7 +144,7 @@ export default function AvisoMedico() {
 
                     <h2>8. Certificações e Regulamentações</h2>
                     <p>
-                        O GlucoAI <strong>NÃO é certificado</strong> como dispositivo médico por:
+                        A Glicie <strong>NÃO é certificada</strong> como dispositivo médico por:
                     </p>
                     <ul>
                         <li>ANVISA (Agência Nacional de Vigilância Sanitária)</li>
@@ -157,13 +157,13 @@ export default function AvisoMedico() {
 
                     <h2>9. Consentimento Informado</h2>
                     <p>
-                        Ao usar o GlucoAI, você declara que:
+                        Ao usar a Glicie, você declara que:
                     </p>
                     <ul>
                         <li>Leu e compreendeu este Aviso Médico</li>
                         <li>Entende as limitações da Inteligência Artificial</li>
                         <li>Assume total responsabilidade por suas decisões de saúde</li>
-                        <li>Não responsabilizará o GlucoAI por erros ou complicações</li>
+                        <li>Não responsabilizará a Glicie por erros ou complicações</li>
                     </ul>
 
                     <h2>10. Recursos de Emergência</h2>
@@ -185,14 +185,14 @@ export default function AvisoMedico() {
                     <p>
                         Para dúvidas sobre este Aviso Médico:
                         <br />
-                        Email: <a href="mailto:legal@glucoai.com" className="text-teal-600">legal@glucoai.com</a>
+                        Email: <a href="mailto:legal@glicie.com.br" className="text-teal-600">legal@glicie.com.br</a>
                     </p>
                 </div>
 
                 {/* Footer */}
                 <div className="mt-12 pt-6 border-t border-gray-200">
                     <p className="text-sm text-gray-500 text-center">
-                        © 2026 GlucoAI. Todos os direitos reservados.
+                        © 2026 Glicie. Todos os direitos reservados.
                         <br />
                         Este aviso médico é parte integrante dos Termos de Uso.
                     </p>

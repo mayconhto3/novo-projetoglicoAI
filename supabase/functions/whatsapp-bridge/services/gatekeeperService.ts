@@ -46,7 +46,7 @@ const LIMITS = {
 const BLOCK_MESSAGES = {
     trial_expired: `🔒 *Seu período de teste gratuito acabou.*
 
-Espero que o GlucoAI tenha te ajudado nestes 7 dias! 
+Espero que a Glicie tenha te ajudado nestes 7 dias! 
 
 Para continuar tendo:
 ✅ Previsões de insulina por foto
@@ -60,7 +60,7 @@ Assine o plano Premium por apenas *R$ 29,90/mês*.
 
     subscription_inactive: `🔒 *Sua assinatura está inativa.*
 
-Para continuar usando o GlucoAI, renove sua assinatura.
+Para continuar usando a Glicie, renove sua assinatura.
 
 💳 *Clique aqui para renovar:* [link em breve]`,
 

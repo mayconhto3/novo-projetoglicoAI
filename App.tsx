@@ -178,7 +178,7 @@ const App: React.FC = () => {
       {!userProfile ? (
         <QuestionnaireWizard onComplete={handleOnboardingComplete} />
       ) : needsActivation ? (
-        <ActivationPage />
+        <ActivationPage onSkip={() => setNeedsActivation(false)} />
       ) : (
         <>
           <NotificationManager user={userProfile} />

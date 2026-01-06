@@ -31,7 +31,7 @@ export const TOOLTIPS: Record<string, TooltipContent> = {
     iob: {
         title: "O que é Insulina Ativa (IOB)?",
         content: "É a quantidade de insulina ainda atuando no seu corpo de doses anteriores. A insulina rápida age por 3-5 horas.",
-        example: "Se você aplicou 5 unidades há 2 horas, pode ter 2 unidades ainda ativas. O GlucoAI desconta isso automaticamente para evitar hipoglicemia.",
+        example: "Se você aplicou 5 unidades há 2 horas, pode ter 2 unidades ainda ativas. A Glicie desconta isso automaticamente para evitar hipoglicemia.",
         learnMore: "Nunca aplique insulina de correção sem considerar a IOB!"
     },
 
@@ -93,7 +93,7 @@ export const TOOLTIPS: Record<string, TooltipContent> = {
         title: "Tipo de Diabetes",
         content: "Existem diferentes tipos de diabetes, cada um com características específicas de tratamento.",
         example: "Tipo 1: Autoimune, sempre precisa de insulina. Tipo 2: Resistência à insulina, pode ou não usar insulina. Gestacional: Durante a gravidez.",
-        learnMore: "O tipo influencia as sugestões e cálculos do GlucoAI."
+        learnMore: "O tipo influencia as sugestões e cálculos da Glicie."
     },
 
     // ============================================================================
@@ -104,7 +104,7 @@ export const TOOLTIPS: Record<string, TooltipContent> = {
         title: "Método de Aplicação de Insulina",
         content: "O dispositivo que você usa para aplicar insulina determina a precisão das doses.",
         example: "Caneta: Geralmente 1.0u de precisão. Bomba de Insulina: Pode ter 0.1u ou 0.05u de precisão.",
-        learnMore: "Isso afeta como o GlucoAI arredonda as doses sugeridas."
+        learnMore: "Isso afeta como a Glicie arredonda as doses sugeridas."
     },
 
     insulinStep: {
@@ -120,8 +120,8 @@ export const TOOLTIPS: Record<string, TooltipContent> = {
 
     mealTimes: {
         title: "Horários das Refeições",
-        content: "Informar os horários habituais das refeições ajuda o GlucoAI a identificar automaticamente o período do dia.",
-        example: "Café: 7h, Almoço: 12h, Jantar: 19h. Se você enviar uma foto às 12:30, o GlucoAI sabe que é almoço e usa o Ratio IC correto.",
+        content: "Informar os horários habituais das refeições ajuda a Glicie a identificar automaticamente o período do dia.",
+        example: "Café: 7h, Almoço: 12h, Jantar: 19h. Se você enviar uma foto às 12:30, a Glicie sabe que é almoço e usa o Ratio IC correto.",
         learnMore: "Você pode ter Ratios diferentes para cada refeição."
     },
 
@@ -129,7 +129,7 @@ export const TOOLTIPS: Record<string, TooltipContent> = {
         title: "Horários da Basal",
         content: "Quando você costuma aplicar a insulina basal (lenta).",
         example: "Manhã: 8h (Lantus 20u), Noite: 22h (Lantus 15u). Ou apenas 1x ao dia (Tresiba 30u às 8h).",
-        learnMore: "O GlucoAI pode lembrá-lo se você esquecer de aplicar."
+        learnMore: "A Glicie pode lembrá-lo se você esquecer de aplicar."
     }
 };
 

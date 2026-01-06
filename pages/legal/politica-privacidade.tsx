@@ -39,7 +39,7 @@ export default function PoliticaPrivacidade() {
                     </div>
 
                     <h2>1. Dados Coletados</h2>
-                    <p>O GlucoAI coleta os seguintes tipos de dados:</p>
+                    <p>A Glicie coleta os seguintes tipos de dados:</p>
 
                     <h3>1.1. Dados Pessoais (Art. 5º, I da LGPD)</h3>
                     <ul>
@@ -131,8 +131,8 @@ export default function PoliticaPrivacidade() {
 
                     <p>
                         Para exercer seus direitos, entre em contato:
-                        <a href="mailto:privacidade@glucoai.com" className="text-teal-600 ml-1">
-                            privacidade@glucoai.com
+                        <a href="mailto:privacidade@glicie.com.br" className="text-teal-600 ml-1">
+                            privacidade@glicie.com.br
                         </a>
                     </p>
 
@@ -164,7 +164,7 @@ export default function PoliticaPrivacidade() {
                     <p>
                         Nosso Encarregado de Proteção de Dados (DPO) pode ser contatado em:
                         <br />
-                        Email: <a href="mailto:dpo@glucoai.com" className="text-teal-600">dpo@glucoai.com</a>
+                        Email: <a href="mailto:dpo@glicie.com.br" className="text-teal-600">dpo@glicie.com.br</a>
                     </p>
 
                     <h2>10. Alterações nesta Política</h2>
@@ -177,14 +177,14 @@ export default function PoliticaPrivacidade() {
                     <p>
                         Para dúvidas sobre privacidade e proteção de dados:
                         <br />
-                        Email: <a href="mailto:privacidade@glucoai.com" className="text-teal-600">privacidade@glucoai.com</a>
+                        Email: <a href="mailto:privacidade@glicie.com.br" className="text-teal-600">privacidade@glicie.com.br</a>
                     </p>
                 </div>
 
                 {/* Footer */}
                 <div className="mt-12 pt-6 border-t border-gray-200">
                     <p className="text-sm text-gray-500 text-center">
-                        © 2026 GlucoAI. Todos os direitos reservados. • Conforme LGPD (Lei 13.709/2018)
+                        © 2026 Glicie. Todos os direitos reservados. • Conforme LGPD (Lei 13.709/2018)
                     </p>
                 </div>
             </div>

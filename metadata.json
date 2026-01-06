@@ -1,5 +1,5 @@
 {
-  "name": "GlucoAI",
+  "name": "Glicie",
   "description": "An intelligent diabetes management assistant featuring a comprehensive onboarding questionnaire, visual dashboard, and Gemini-powered health insights.",
   "requestFramePermissions": [
     "camera",

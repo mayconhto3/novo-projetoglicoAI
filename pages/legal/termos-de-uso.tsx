@@ -29,21 +29,21 @@ export default function TermosDeUso() {
                 <div className="prose prose-teal max-w-none">
                     <h2>1. Aceitação dos Termos</h2>
                     <p>
-                        Ao acessar e usar o GlucoAI, você concorda em cumprir e estar vinculado aos
+                        Ao acessar e usar a Glicie, você concorda em cumprir e estar vinculado aos
                         seguintes Termos de Uso. Se você não concordar com qualquer parte destes termos,
                         não deverá usar nosso serviço.
                     </p>
 
                     <h2>2. Descrição do Serviço</h2>
                     <p>
-                        O GlucoAI é uma ferramenta educativa baseada em Inteligência Artificial que
+                        A Glicie é uma ferramenta educativa baseada em Inteligência Artificial que
                         auxilia pessoas com diabetes no monitoramento glicêmico e cálculo de doses de
-                        insulina. <strong>O GlucoAI NÃO substitui orientação médica profissional.</strong>
+                        insulina. <strong>A Glicie NÃO substitui orientação médica profissional.</strong>
                     </p>
 
                     <h2>3. Disclaimer Médico</h2>
                     <p className="bg-red-50 border-l-4 border-red-500 p-4 my-4">
-                        <strong>IMPORTANTE:</strong> O GlucoAI é uma ferramenta educativa e NÃO é um
+                        <strong>IMPORTANTE:</strong> A Glicie é uma ferramenta educativa e NÃO é um
                         dispositivo médico. As sugestões fornecidas pela IA são apenas orientações
                         educacionais. Você deve SEMPRE:
                     </p>
@@ -55,7 +55,7 @@ export default function TermosDeUso() {
                     </ul>
 
                     <h2>4. Responsabilidades do Usuário</h2>
-                    <p>Ao usar o GlucoAI, você concorda em:</p>
+                    <p>Ao usar a Glicie, você concorda em:</p>
                     <ul>
                         <li>Fornecer informações precisas e atualizadas sobre sua condição de saúde</li>
                         <li>Usar o serviço apenas para fins educativos e de monitoramento pessoal</li>
@@ -65,7 +65,7 @@ export default function TermosDeUso() {
 
                     <h2>5. Limitação de Responsabilidade</h2>
                     <p>
-                        O GlucoAI e seus desenvolvedores NÃO se responsabilizam por:
+                        A Glicie e seus desenvolvedores NÃO se responsabilizam por:
                     </p>
                     <ul>
                         <li>Decisões médicas tomadas com base nas sugestões da IA</li>
@@ -76,14 +76,14 @@ export default function TermosDeUso() {
 
                     <h2>6. Uso do WhatsApp</h2>
                     <p>
-                        O GlucoAI utiliza o WhatsApp como canal de comunicação. Ao usar este serviço,
+                        A Glicie utiliza o WhatsApp como canal de comunicação. Ao usar este serviço,
                         você reconhece que suas mensagens trafegam pela infraestrutura da Meta Inc.
                         (proprietária do WhatsApp), sujeita às políticas de privacidade da Meta.
                     </p>
 
                     <h2>7. Propriedade Intelectual</h2>
                     <p>
-                        Todo o conteúdo, design, código e funcionalidades do GlucoAI são propriedade
+                        Todo o conteúdo, design, código e funcionalidades da Glicie são propriedade
                         exclusiva da empresa e estão protegidos por leis de direitos autorais.
                     </p>
 
@@ -96,7 +96,7 @@ export default function TermosDeUso() {
 
                     <h2>9. Rescisão</h2>
                     <p>
-                        Podemos suspender ou encerrar seu acesso ao GlucoAI imediatamente, sem aviso
+                        Podemos suspender ou encerrar seu acesso à Glicie imediatamente, sem aviso
                         prévio, em caso de violação destes Termos de Uso.
                     </p>
 
@@ -110,14 +110,14 @@ export default function TermosDeUso() {
                     <p>
                         Para dúvidas sobre estes Termos de Uso, entre em contato:
                         <br />
-                        Email: <a href="mailto:legal@glucoai.com" className="text-teal-600">legal@glucoai.com</a>
+                        Email: <a href="mailto:legal@glicie.com.br" className="text-teal-600">legal@glicie.com.br</a>
                     </p>
                 </div>
 
                 {/* Footer */}
                 <div className="mt-12 pt-6 border-t border-gray-200">
                     <p className="text-sm text-gray-500 text-center">
-                        © 2026 GlucoAI. Todos os direitos reservados.
+                        © 2026 Glicie. Todos os direitos reservados.
                     </p>
                 </div>
             </div>
