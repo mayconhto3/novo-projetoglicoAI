@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { InfoTooltip, FIELD_EXPLANATIONS } from './InfoTooltip';
 import { CustomSelect } from './ui/CustomSelect';
+import { LegalModal } from './LegalModal';
 
 interface SettingsProps {
     onBack: () => void;
@@ -21,6 +22,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
     const [success, setSuccess] = useState(false);
     const [editMode, setEditMode] = useState<string | null>(null);
     const [openSection, setOpenSection] = useState<string | null>('profile');
+    const [legalModal, setLegalModal] = useState<'termos' | 'privacidade' | 'aviso' | null>(null);
 
     useEffect(() => {
         fetchUserProfile();
@@ -920,36 +922,36 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                         Informações Legais
                     </div>
                     <div className="flex flex-col gap-2">
-                        <a
-                            href="/legal/termos-de-uso"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        <button
+                            onClick={() => setLegalModal('termos')}
                             className="bg-white/5 hover:bg-white/10 text-white text-center py-3 px-4 rounded-lg transition-all"
+                            aria-label="Abrir Termos de Uso"
                         >
                             📜 Termos de Uso
-                        </a>
-                        <a
-                            href="/legal/politica-privacidade"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        </button>
+                        <button
+                            onClick={() => setLegalModal('privacidade')}
                             className="bg-white/5 hover:bg-white/10 text-white text-center py-3 px-4 rounded-lg transition-all"
+                            aria-label="Abrir Política de Privacidade"
                         >
                             🔒 Política de Privacidade
-                        </a>
-                        <a
-                            href="/legal/aviso-medico"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        </button>
+                        <button
+                            onClick={() => setLegalModal('aviso')}
                             className="bg-white/5 hover:bg-white/10 text-white text-center py-3 px-4 rounded-lg transition-all"
+                            aria-label="Abrir Aviso Médico"
                         >
                             ⚕️ Aviso Médico
-                        </a>
+                        </button>
                     </div>
                     <div className="text-center text-white/30 text-xs mt-4">
                         © 2026 GlucoAI - Todos os direitos reservados
                     </div>
                 </div>
             </div>
+
+            {/* Legal Pages Modal */}
+            <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />
         </div>
     );
 };
