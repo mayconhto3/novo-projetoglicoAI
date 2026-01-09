@@ -781,7 +781,8 @@ serve(async (req) => {
     // ❌ BLOCO REMOVIDO: Insert de insulin_history (Causava duplicidade)
 
     // ✅ FIX: Aguardar salvamento de histórico antes de retornar resposta
-    await Promise.all(savePromises).catch(err => console.error("Erro ao salvar histórico:", err));
+    // Nota: savePromises já tem tratamento de erro individual, apenas aguardamos
+    await Promise.all(savePromises);
 
     return new Response(JSON.stringify({
       number: cleanInputPhone,

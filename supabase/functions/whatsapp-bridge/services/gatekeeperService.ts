@@ -144,14 +144,17 @@ export async function checkGatekeeper(
         if (now > trialEnds) {
             console.log(`[Gatekeeper] Trial vencido para user ${profile.id || 'unknown'}`);
 
-            // ✅ FIX: Aguardar atualização de status
-            await supabase
+            // ✅ FIX: Aguardar atualização de status (sintaxe Supabase correta)
+            const { error: updateError } = await supabase
                 .from('profiles')
                 .update({ subscription_status: 'expired' })
-                .eq('id', profile.id)
-                .catch((err: any) => console.error('[Gatekeeper] Erro ao atualizar status:', err));
+                .eq('id', profile.id);
 
-            console.log('[Gatekeeper] Status atualizado para expired');
+            if (updateError) {
+                console.error('[Gatekeeper] Erro ao atualizar status:', updateError);
+            } else {
+                console.log('[Gatekeeper] Status atualizado para expired');
+            }
 
             return {
                 allowed: false,
@@ -208,14 +211,17 @@ export async function checkGatekeeper(
     // 6. SALVAR STATS NO BANCO (Fire and Forget - não bloqueia resposta)
     // ============================================================================
 
-    // ✅ FIX: Aguardar salvamento de stats
-    await supabase
+    // ✅ FIX: Aguardar salvamento de stats (sintaxe Supabase correta)
+    const { error: statsError } = await supabase
         .from('profiles')
         .update({ usage_stats: stats })
-        .eq('id', profile.id)
-        .catch((err: any) => console.error('[Gatekeeper] Erro ao salvar stats:', err));
+        .eq('id', profile.id);
 
-    console.log(`[Gatekeeper] Stats salvos: ${JSON.stringify(stats)}`);
+    if (statsError) {
+        console.error('[Gatekeeper] Erro ao salvar stats:', statsError);
+    } else {
+        console.log(`[Gatekeeper] Stats salvos: ${JSON.stringify(stats)}`);
+    }
 
     // ============================================================================
     // 7. LIBERADO - RETORNAR SUCESSO
