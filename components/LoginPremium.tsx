@@ -95,7 +95,7 @@ export const LoginPremium: React.FC = () => {
 
           {/* Logo e Título */}
           <div className="header">
-            <h1 className="logo">GlucoAI</h1>
+            <h1 className="logo">Glicie</h1>
             <p className="tagline">
               Seu assistente inteligente de diabetes
             </p>

@@ -71,7 +71,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ user, readings, is
           setMessages([{
             id: 'init',
             role: 'model',
-            text: `Olá, ${user.name.split(' ')[0]}! Sou seu assistente GlucoAI. Como está sua glicemia agora?`,
+            text: `Olá, ${user.name.split(' ')[0]}! Sou seu assistente Glicie. Como está sua glicemia agora?`,
             timestamp: new Date()
           }]);
         }
@@ -372,7 +372,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ user, readings, is
               <img src="https://i.ibb.co/sBWYLd6/Kit-M-dico-Verde-Claro-M-dico-Logotipo-1000-x-1000-px-6.png" alt="GlucoAI" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h3 className="font-bold">GlucoAI Assistente</h3>
+              <h3 className="font-bold">Glicie Assistente</h3>
               <p className="text-xs text-teal-100 flex items-center gap-1">
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                 Online
@@ -399,8 +399,8 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ user, readings, is
             >
               <div
                 className={`max-w-[80%] rounded-2xl p-3 shadow-sm ${msg.role === 'user'
-                    ? 'bg-teal-600 text-white rounded-br-none'
-                    : 'bg-white text-slate-800 border border-slate-100 rounded-bl-none'
+                  ? 'bg-teal-600 text-white rounded-br-none'
+                  : 'bg-white text-slate-800 border border-slate-100 rounded-bl-none'
                   }`}
               >
                 {msg.image && (

@@ -945,7 +945,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
                         </button>
                     </div>
                     <div className="text-center text-white/30 text-xs mt-4">
-                        © 2026 GlucoAI - Todos os direitos reservados
+                        © 2026 Glicie - Todos os direitos reservados
                     </div>
                 </div>
             </div>

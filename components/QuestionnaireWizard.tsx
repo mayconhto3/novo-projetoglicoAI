@@ -1,10 +1,56 @@
+// OS-2026-BETA: Questionário Simplificado com Design Premium
+// HOTFIX: Restauração do Design Original + Lógica Enxuta
+// Data: 2026-01-15
+
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../services/supabaseClient';
-import { ArrowRight, ArrowLeft, Check } from 'lucide-react';
-import { InfoTooltip } from './ui/InfoTooltip';
-import { Step1, Step2, Step3, Step4, Step5, Step6, Step7, Step8 } from './WizardSteps';
-import { UserProfile } from '../types';
+import { UserProfile, DiabetesType, Gender } from '../types';
+import { ArrowRight, Check, Heart, Droplet, Activity } from 'lucide-react';
+import { PillTag } from './ui/PillTag';
+import { CustomSelect } from './ui/CustomSelect';
 import '../styles/wizard.css';
+
+// ============================================================================
+// CONSTANTES DE INSULINAS (Sincronizado com Settings.tsx)
+// ============================================================================
+
+const BASAL_INSULIN_BRANDS = [
+    'Lantus',
+    'Basaglar',
+    'Semglee',
+    'Rezvoglar',
+    'Basalog',
+    'Basalog One',
+    'Glaritus',
+    'Glaricon',
+    'Glarisulin',
+    'Lansta',
+    'Toujeo',
+    'Tresiba',
+    'Levemir',
+    'Humulin N',
+    'Novolin N',
+    'Iletin II',
+    'Insulatard MC',
+    'Protaphane HM',
+    'Outro'
+];
+
+const BOLUS_INSULIN_BRANDS = [
+    'Humalog',
+    'NovoRapid',
+    'Fiasp',
+    'Apidra',
+    'Lyumjev',
+    'Admelog',
+    'Insulin Lispro',
+    'Insulin Aspart',
+    'Insulin Glulisine',
+    'Humulin R',
+    'Novolin R',
+    'Actrapid',
+    'Regular Iletin II',
+    'Outro'
+];
 
 // ============================================================================
 // TIPOS E INTERFACES
@@ -12,322 +58,415 @@ import '../styles/wizard.css';
 
 interface QuestionnaireWizardProps {
     onComplete: (profile: UserProfile) => void;
+    session: any;
 }
 
-// ============================================================================
-// TIPOS E INTERFACES
-// ============================================================================
-
-interface WizardData {
-    // Step 1: Informações Básicas
+interface SimplifiedFormData {
     name: string;
-    phone: string; // CRÍTICO: Campo de WhatsApp
-    birthDate: string;
-    gender: 'male' | 'female' | 'other' | '';
-
-    // Step 2: Sobre o Diabetes + Insulina
-    diabetesType: 'type1' | 'type2' | 'gestational' | 'prediabetes' | 'unknown' | '';
-    diagnosisYear: string;
-    hba1c: string;
-    usesInsulin: boolean | null;
-    insulinMethod: 'pen' | 'pump' | 'syringe' | '';
-    insulinStep: '1.0' | '0.5' | '';
-
-    // Step 3: Dados Físicos
-    weight: string;
-    height: string;
-
-    // Step 4: Parâmetros
-    totalBasal: string;
-    totalBolus: string;
-    ratioIC: string;
+    email: string;
+    phone: string;
+    diabetesType: string;
+    therapyType: string;
+    basalInsulin: string;
+    bolusInsulin: string;
     correctionFactor: string;
-    targetGlucosePreMeal: string;
-    targetGlucosePostMeal: string;
-
-    // Step 5: Monitoramento
-    measurementFrequency: string;
-    hypoHistory: string;
-    hyperHistory: string;
-    hypoSymptoms: string[];
-
-    // Step 6: Alimentação
-    breakfastTime: string;
-    lunchTime: string;
-    dinnerTime: string;
-    diet: string;
-    countCarbs: string;
-    problematicFoods: string[];
-
-    // Step 7: Estilo de Vida
-    exercise: string;
-    smoking: string;
-    alcohol: string;
-    sleepQuality: string;
-
-    // Step 8: Saúde & Medicamentos
-    diabetesMeds: string[];
-    glycemicMeds: string[];
-    comorbidities: string[];
-    communicationStyle: string;
+    carbRatio: string;
 }
-
-const STORAGE_KEY = 'wizard_data_temp';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
 // ============================================================================
 
-export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({ onComplete }) => {
+export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({ onComplete, session }) => {
+    // Auto-fill de dados da sessão
+    const authEmail = session?.user?.email || '';
+    const metaName = session?.user?.user_metadata?.full_name
+        || session?.user?.user_metadata?.name
+        || session?.user?.email?.split('@')[0]
+        || 'Usuário';
+
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
-    // Estado inicial
-    const [data, setData] = useState<WizardData>({
-        // Step 1
-        name: '',
+    const [formData, setFormData] = useState<SimplifiedFormData>({
+        name: metaName,
+        email: authEmail,
         phone: '',
-        birthDate: '',
-        gender: '',
-
-        // Step 2
         diabetesType: '',
-        diagnosisYear: '',
-        hba1c: '',
-        usesInsulin: null,
-        insulinMethod: '',
-        insulinStep: '',
-
-        // Step 3
-        weight: '',
-        height: '',
-
-        // Step 4
-        totalBasal: '',
-        totalBolus: '',
-        ratioIC: '',
+        therapyType: '',
+        basalInsulin: '',
+        bolusInsulin: '',
         correctionFactor: '',
-        targetGlucosePreMeal: '100',
-        targetGlucosePostMeal: '140',
-
-        // Step 5
-        measurementFrequency: '',
-        hypoHistory: '',
-        hyperHistory: '',
-        hypoSymptoms: [],
-
-        // Step 6
-        breakfastTime: '08:00',
-        lunchTime: '12:00',
-        dinnerTime: '19:00',
-        diet: '',
-        countCarbs: '',
-        problematicFoods: [],
-
-        // Step 7
-        exercise: '',
-        smoking: '',
-        alcohol: '',
-        sleepQuality: '',
-
-        // Step 8
-        diabetesMeds: [],
-        glycemicMeds: [],
-        comorbidities: [],
-        communicationStyle: 'Amigável'
+        carbRatio: ''
     });
 
-    // ============================================================================
-    // PERSISTÊNCIA DE ESTADO (Tech Lead Tip)
-    // ============================================================================
-
-    // Restaurar estado ao carregar
+    // Atualizar auto-fill quando sessão carregar
     useEffect(() => {
-        const savedData = localStorage.getItem(STORAGE_KEY);
-        if (savedData) {
-            try {
-                const parsed = JSON.parse(savedData);
-                setData(parsed.data);
-                setCurrentStep(parsed.step);
-                console.log('[Wizard] Estado restaurado do localStorage');
-            } catch (err) {
-                console.error('[Wizard] Erro ao restaurar estado:', err);
-            }
+        if (metaName && !formData.name) {
+            setFormData(prev => ({ ...prev, name: metaName }));
         }
-    }, []);
-
-    // Salvar estado a cada mudança
-    useEffect(() => {
-        if (currentStep > 0) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                data,
-                step: currentStep,
-                timestamp: new Date().toISOString()
-            }));
+        if (authEmail && !formData.email) {
+            setFormData(prev => ({ ...prev, email: authEmail }));
         }
-    }, [data, currentStep]);
+    }, [metaName, authEmail]);
 
-    // ============================================================================
-    // NAVEGAÇÃO
-    // ============================================================================
+    // ========================================
+    // MÁSCARA DE TELEFONE
+    // ========================================
 
-    const nextStep = () => {
-        if (currentStep < 8) {
-            setCurrentStep(currentStep + 1);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+    const formatPhone = (value: string) => {
+        const numbers = value.replace(/\D/g, '');
+        if (numbers.length <= 10) {
+            return numbers.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
         }
+        return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
     };
 
-    const prevStep = () => {
-        if (currentStep > 1) {
-            setCurrentStep(currentStep - 1);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const formatted = formatPhone(e.target.value);
+        setFormData({ ...formData, phone: formatted });
     };
 
-    // ============================================================================
-    // SUBMISSÃO FINAL
-    // ============================================================================
+    // ========================================
+    // SUBMIT COM DEFAULTS
+    // ========================================
 
     const handleSubmit = async () => {
         setLoading(true);
-        setError(null);
 
-        try {
-            // CRÍTICO: Limpar telefone (remover máscara)
-            let cleanPhone = data.phone.replace(/\D/g, '');
-            // Adicionar código do Brasil se necessário
-            if (cleanPhone.length === 11) {
-                cleanPhone = '55' + cleanPhone; // 5511999999999
-            }
+        // Determinar se usa insulina
+        const usesInsulin = formData.therapyType === 'pen' || formData.therapyType === 'pump';
+        const insulinMethod = formData.therapyType === 'pump' ? 'Bomba' :
+            formData.therapyType === 'pen' ? 'Caneta' : undefined;
 
-            // Converter dados do wizard para UserProfile
-            const profile: UserProfile = {
-                // Step 1: Informações Básicas
-                name: data.name,
-                email: '', // Será preenchido pelo App.tsx
-                phone: cleanPhone,
-                birthDate: data.birthDate,
-                gender: data.gender as any,
+        // Mapear tipo de diabetes
+        const diabetesTypeMap: Record<string, DiabetesType> = {
+            'Tipo 1': DiabetesType.Type1,
+            'Tipo 2': DiabetesType.Type2,
+            'LADA': DiabetesType.Type1, // LADA é considerado Tipo 1
+            'Gestacional': DiabetesType.Gestational
+        };
 
-                // Step 2: Diagnóstico + Insulina
-                diabetesType: data.diabetesType as any,
-                diagnosisYear: parseInt(data.diagnosisYear) || 0,
-                hba1c: parseFloat(data.hba1c) || undefined,
-                usesInsulin: data.usesInsulin || false,
-                insulinMethod: data.insulinMethod as any,
-                insulinStep: data.insulinStep === '0.5' ? 0.5 : 1.0,
+        const finalProfile: UserProfile = {
+            // Dados reais
+            name: formData.name || 'Usuário',
+            email: formData.email,
+            phone: formData.phone.replace(/\D/g, ''),
+            diabetesType: diabetesTypeMap[formData.diabetesType] || DiabetesType.Unknown,
 
-                // Step 3: Dados Físicos
-                weight: parseFloat(data.weight) || 0,
-                height: parseFloat(data.height) || 0,
+            // Dados inferidos
+            usesInsulin,
+            insulinMethod,
 
-                // Step 4: Parâmetros
-                icRatioBreakfast: parseFloat(data.ratioIC) || undefined,
-                icRatioLunch: parseFloat(data.ratioIC) || undefined,
-                icRatioDinner: parseFloat(data.ratioIC) || undefined,
-                icRatioSnack: parseFloat(data.ratioIC) || undefined,
-                isfMorning: parseFloat(data.correctionFactor) || undefined,
-                targetGlucosePreMeal: parseFloat(data.targetGlucosePreMeal) || 100,
-                targetGlucosePostMeal: parseFloat(data.targetGlucosePostMeal) || 140,
+            // Defaults de segurança
+            birthDate: new Date().toISOString(),
+            gender: Gender.Other,
+            weight: 0,
+            height: 0,
+            diagnosisYear: new Date().getFullYear(),
 
-                // Step 5: Monitoramento (OS-18)
-                hypoHistory: data.hypoHistory as any,
-                hyperHistory: data.hyperHistory as any,
-                hypoSymptoms: data.hypoSymptoms,
+            // Insulinas
+            basalInsulin: {
+                uses: !!formData.basalInsulin,
+                brand: formData.basalInsulin || undefined
+            },
+            bolusInsulin: {
+                uses: !!formData.bolusInsulin,
+                brand: formData.bolusInsulin || undefined
+            },
 
-                // Step 6: Alimentação (OS-18)
-                mealTimes: {
-                    breakfast: data.breakfastTime,
-                    lunch: data.lunchTime,
-                    dinner: data.dinnerTime
-                },
-                diet: data.diet,
-                countCarbs: data.countCarbs as any,
-                problematicFoods: data.problematicFoods,
+            // Fatores
+            knowsISF: !!formData.correctionFactor,
+            isfMorning: formData.correctionFactor ? Number(formData.correctionFactor) : undefined,
+            isfAfternoon: formData.correctionFactor ? Number(formData.correctionFactor) : undefined,
+            isfEvening: formData.correctionFactor ? Number(formData.correctionFactor) : undefined,
 
-                // Step 7: Estilo de Vida (OS-18)
-                exercise: data.exercise,
-                smoking: data.smoking,
-                alcohol: data.alcohol,
-                sleepQuality: data.sleepQuality,
+            knowsICRatio: !!formData.carbRatio,
+            icRatioBreakfast: formData.carbRatio ? Number(formData.carbRatio) : undefined,
+            icRatioLunch: formData.carbRatio ? Number(formData.carbRatio) : undefined,
+            icRatioDinner: formData.carbRatio ? Number(formData.carbRatio) : undefined,
 
-                // Step 8: Saúde & Medicamentos (OS-18 + OS-20)
-                diabetesMeds: data.diabetesMeds,
-                glycemicMeds: data.glycemicMeds,
-                comorbidities: data.comorbidities,
-                communicationStyle: data.communicationStyle, // OS-20: Persona dinâmica
-            };
+            // Metas
+            targetGlucosePreMeal: 100,
+            targetGlucosePostMeal: 140,
+            targetsDefinedByDoctor: false,
 
-            console.log('[Wizard] Dados convertidos, chamando onComplete');
+            // Defaults vazios
+            measurementFrequency: '3x',
+            usesCGM: false,
+            mealTimes: {
+                breakfast: '08:00',
+                lunch: '12:00',
+                dinner: '19:00'
+            },
+            treatmentGoals: ['Controle glicêmico'],
+            exerciseFrequency: 'Sedentário',
+            smoker: 'Não',
+            alcoholConsumption: 'Nunca',
+            stressLevel: 'Médio',
+            sleepQuality: 'Boa',
+            hasEndocrinologist: false,
+            hasNutritionist: false,
+            reminders: [],
+            checkInFrequency: 'Diário',
+            communicationStyle: 'Amigável',
+            termsAccepted: true,
+            medicalDisclaimerAccepted: true,
+            dataProcessingConsent: true,
+            doctorSharingConsent: false
+        };
 
-            // Limpar localStorage após sucesso
-            localStorage.removeItem(STORAGE_KEY);
-
-            // Chamar callback do App.tsx
-            onComplete(profile);
-        } catch (err: any) {
-            console.error('[Wizard] Erro ao processar dados:', err);
-            setError(err.message || 'Erro ao processar dados');
-        } finally {
-            setLoading(false);
-        }
+        // Delay para UX
+        setTimeout(() => {
+            onComplete(finalProfile);
+        }, 800);
     };
 
-    // ============================================================================
-    // PROGRESS BAR
-    // ============================================================================
+    // ========================================
+    // VALIDAÇÃO
+    // ========================================
 
-    const progress = (currentStep / 8) * 100;
+    const canProceedStep1 = () => {
+        return formData.phone.length >= 14 && !!formData.diabetesType;
+    };
+
+    const canProceedStep2 = () => {
+        return !!formData.therapyType;
+    };
+
+    // ========================================
+    // RENDER
+    // ========================================
+
+    const progress = (currentStep / 3) * 100;
 
     return (
         <div className="wizard-container">
-            {/* Progress Bar */}
+            {/* Progress Bar Premium */}
             <div className="wizard-progress">
                 <div className="progress-bar">
                     <div className="progress-fill" style={{ width: `${progress}%` }} />
                 </div>
-                <p className="progress-text">
-                    Passo {currentStep} de 8
-                </p>
+                <p className="progress-text">Passo {currentStep} de 3</p>
             </div>
 
-            {/* Step Content */}
             <div className="wizard-content">
-                {currentStep === 1 && <Step1 data={data} setData={setData} />}
-                {currentStep === 2 && <Step2 data={data} setData={setData} />}
-                {currentStep === 3 && <Step3 data={data} setData={setData} />}
-                {currentStep === 4 && <Step4 data={data} setData={setData} />}
-                {currentStep === 5 && <Step5 data={data} setData={setData} />}
-                {currentStep === 6 && <Step6 data={data} setData={setData} />}
-                {currentStep === 7 && <Step7 data={data} setData={setData} />}
-                {currentStep === 8 && <Step8 data={data} setData={setData} />}
+                {/* PASSO 1: IDENTIFICAÇÃO */}
+                {currentStep === 1 && (
+                    <div className="wizard-step animate-fadeIn">
+                        <div className="step-header">
+                            <div className="step-header-title">
+                                <Heart className="step-icon" />
+                                <h2>Olá, {formData.name.split(' ')[0]}!</h2>
+                            </div>
+                            <p style={{ color: 'var(--color-gray-500)', margin: 0 }}>
+                                Vamos configurar seu assistente pessoal.
+                            </p>
+                        </div>
+
+                        <div className="form-section">
+                            <div className="form-field">
+                                <label>Seu WhatsApp (Essencial)</label>
+                                <input
+                                    type="tel"
+                                    value={formData.phone}
+                                    onChange={handlePhoneChange}
+                                    placeholder="(11) 99999-9999"
+                                    maxLength={15}
+                                />
+                                <small style={{ color: 'var(--color-gray-500)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                                    Usaremos para enviar suas análises e lembretes
+                                </small>
+                            </div>
+
+                            <div className="form-field">
+                                <label>Tipo de Diabetes</label>
+                                <div className="pills-container">
+                                    {['Tipo 1', 'Tipo 2', 'LADA', 'Gestacional'].map(type => (
+                                        <PillTag
+                                            key={type}
+                                            label={type}
+                                            isSelected={formData.diabetesType === type}
+                                            onClick={() => setFormData({ ...formData, diabetesType: type })}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* PASSO 2: TERAPIA */}
+                {currentStep === 2 && (
+                    <div className="wizard-step animate-fadeIn">
+                        <div className="step-header">
+                            <Droplet className="step-icon" />
+                            <h2>Seu Tratamento</h2>
+                            <p style={{ color: 'var(--color-gray-500)', marginTop: '8px' }}>
+                                Isso ajuda a IA a personalizar as sugestões
+                            </p>
+                        </div>
+
+                        <div className="form-section">
+                            <div className="form-field">
+                                <CustomSelect
+                                    label="Qual sua terapia principal?"
+                                    value={formData.therapyType}
+                                    onChange={(val) => setFormData({ ...formData, therapyType: val })}
+                                    options={[
+                                        { value: 'pen', label: '💉 Canetas / Seringas (MDI)' },
+                                        { value: 'pump', label: '🔋 Bomba de Insulina' },
+                                        { value: 'oral', label: '💊 Apenas Comprimidos/Dieta' }
+                                    ]}
+                                    placeholder="Selecione..."
+                                />
+                            </div>
+
+                            {(formData.therapyType === 'pen' || formData.therapyType === 'pump') && (
+                                <div className="form-section" style={{
+                                    marginTop: '24px',
+                                    borderTop: '1px solid var(--color-gray-200)',
+                                    paddingTop: '24px'
+                                }}>
+                                    <div style={{
+                                        backgroundColor: '#eff6ff',
+                                        padding: '12px 16px',
+                                        borderRadius: '8px',
+                                        marginBottom: '16px',
+                                        border: '1px solid #dbeafe'
+                                    }}>
+                                        <p style={{ color: '#1e40af', fontSize: '13px', lineHeight: '1.5', margin: 0 }}>
+                                            💡 <strong>Opcional:</strong> Se souber as marcas, ajuda a IA a ser mais precisa
+                                        </p>
+                                    </div>
+
+                                    <div className="form-field">
+                                        <CustomSelect
+                                            label="Insulina Basal (Lenta)"
+                                            options={BASAL_INSULIN_BRANDS}
+                                            value={formData.basalInsulin}
+                                            onChange={(v) => setFormData({ ...formData, basalInsulin: v })}
+                                            placeholder="Selecione a marca"
+                                        />
+                                        <small style={{ color: 'var(--color-gray-500)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                                            Insulina de ação lenta/prolongada (ex: Lantus, Tresiba)
+                                        </small>
+                                    </div>
+
+                                    <div className="form-field">
+                                        <CustomSelect
+                                            label="Insulina Bolus (Rápida)"
+                                            options={BOLUS_INSULIN_BRANDS}
+                                            value={formData.bolusInsulin}
+                                            onChange={(v) => setFormData({ ...formData, bolusInsulin: v })}
+                                            placeholder="Selecione a marca"
+                                        />
+                                        <small style={{ color: 'var(--color-gray-500)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                                            Insulina de ação rápida para refeições (ex: NovoRapid, Humalog)
+                                        </small>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* PASSO 3: FATORES */}
+                {currentStep === 3 && (
+                    <div className="wizard-step animate-fadeIn">
+                        <div className="step-header">
+                            <Activity className="step-icon" />
+                            <h2>Fatores de Cálculo</h2>
+                            <p style={{ color: 'var(--color-gray-500)', marginTop: '8px' }}>
+                                Essenciais para a calculadora de bolus
+                            </p>
+                        </div>
+
+                        <div className="form-section">
+                            <div style={{
+                                backgroundColor: '#eff6ff',
+                                padding: '16px',
+                                borderRadius: '12px',
+                                marginBottom: '24px',
+                                border: '1px solid #dbeafe'
+                            }}>
+                                <p style={{ color: '#1e40af', fontSize: '14px', lineHeight: '1.5', margin: 0 }}>
+                                    🤖 <strong>Ajude a IA:</strong> Se você souber seus fatores, a IA poderá calcular suas doses.
+                                    Se não souber, deixe em branco e consulte seu médico.
+                                </p>
+                            </div>
+
+                            <div className="form-field">
+                                <label>Fator de Sensibilidade (FS)</label>
+                                <input
+                                    type="number"
+                                    placeholder="Ex: 40 (1u baixa 40mg/dL)"
+                                    value={formData.correctionFactor}
+                                    onChange={(e) => setFormData({ ...formData, correctionFactor: e.target.value })}
+                                    step="1"
+                                    min="0"
+                                />
+                                <small style={{ color: 'var(--color-gray-500)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                                    Quanto 1 unidade de insulina reduz sua glicemia
+                                </small>
+                            </div>
+
+                            <div className="form-field">
+                                <label>Razão de Carboidrato (I:C)</label>
+                                <input
+                                    type="number"
+                                    placeholder="Ex: 10 (1u cobre 10g)"
+                                    value={formData.carbRatio}
+                                    onChange={(e) => setFormData({ ...formData, carbRatio: e.target.value })}
+                                    step="1"
+                                    min="0"
+                                />
+                                <small style={{ color: 'var(--color-gray-500)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                                    Quantos gramas de carboidrato 1 unidade de insulina cobre
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Error */}
-            {error && (
-                <div className="error-message">
-                    {error}
-                </div>
-            )}
-
-            {/* Navigation Buttons */}
+            {/* Navigation Buttons (Estilo Original) */}
             <div className="wizard-navigation">
                 {currentStep > 1 && (
-                    <button onClick={prevStep} className="btn-secondary">
-                        <ArrowLeft size={20} />
+                    <button
+                        onClick={() => setCurrentStep(c => c - 1)}
+                        className="btn-secondary"
+                    >
                         <span>Voltar</span>
                     </button>
                 )}
 
-                {currentStep < 8 ? (
-                    <button onClick={nextStep} className="btn-primary">
+                {currentStep < 3 ? (
+                    <button
+                        onClick={() => {
+                            // Validação do passo atual
+                            if (currentStep === 1 && !canProceedStep1()) {
+                                alert('Por favor, preencha o WhatsApp e selecione o tipo de diabetes.');
+                                return;
+                            }
+                            if (currentStep === 2 && !canProceedStep2()) {
+                                alert('Por favor, selecione sua terapia.');
+                                return;
+                            }
+                            setCurrentStep(c => c + 1);
+                        }}
+                        className="btn-primary"
+                        disabled={currentStep === 1 ? !canProceedStep1() : !canProceedStep2()}
+                    >
                         <span>Próximo</span>
                         <ArrowRight size={20} />
                     </button>
                 ) : (
-                    <button onClick={handleSubmit} disabled={loading} className="btn-primary">
+                    <button
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="btn-primary"
+                    >
                         {loading ? (
                             <>
                                 <div className="spinner" />
@@ -342,124 +481,6 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({ onComp
                     </button>
                 )}
             </div>
-
-            <style>{`
-        .wizard-container {
-          min-height: 100vh;
-          background: linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%);
-          padding: 24px;
-        }
-
-        .wizard-progress {
-          max-width: 800px;
-          margin: 0 auto 32px;
-        }
-
-        .progress-bar {
-          height: 8px;
-          background: var(--color-gray-200);
-          border-radius: 999px;
-          overflow: hidden;
-          margin-bottom: 8px;
-        }
-
-        .progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #029491 0%, #56da98 100%);
-          transition: width 500ms cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 0 10px rgba(2, 148, 145, 0.5);
-        }
-
-        .progress-text {
-          text-align: center;
-          font-size: var(--font-size-sm);
-          color: var(--color-gray-600);
-          margin: 0;
-        }
-
-        .wizard-content {
-          max-width: 800px;
-          margin: 0 auto 32px;
-        }
-
-        .error-message {
-          max-width: 800px;
-          margin: 0 auto 16px;
-          padding: 12px 16px;
-          background: #fee2e2;
-          border: 1px solid #fca5a5;
-          border-radius: 8px;
-          color: #dc2626;
-          font-size: var(--font-size-sm);
-        }
-
-        .wizard-navigation {
-          max-width: 800px;
-          margin: 0 auto;
-          display: flex;
-          gap: 16px;
-          justify-content: space-between;
-        }
-
-        .btn-primary,
-        .btn-secondary {
-          padding: 16px 32px;
-          border: none;
-          border-radius: 12px;
-          font-size: var(--font-size-base);
-          font-weight: var(--font-weight-semibold);
-          cursor: pointer;
-          transition: all var(--transition-normal);
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .btn-primary {
-          background: linear-gradient(135deg, #029491 0%, #56da98 100%);
-          color: white;
-          box-shadow: 0 10px 20px rgba(2, 148, 145, 0.3);
-          margin-left: auto;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 15px 25px rgba(2, 148, 145, 0.4);
-        }
-
-        .btn-primary:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .btn-secondary {
-          background: white;
-          color: var(--color-gray-700);
-          border: 2px solid var(--color-gray-300);
-        }
-
-        .btn-secondary:hover {
-          background: var(--color-gray-50);
-          border-color: var(--color-gray-400);
-        }
-
-        .spinner {
-          width: 20px;
-          height: 20px;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-top-color: white;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
         </div>
     );
 };
-
-// ============================================================================
-// STEP COMPONENTS (continuação no próximo arquivo)
-// ============================================================================

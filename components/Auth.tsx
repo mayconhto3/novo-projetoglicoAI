@@ -41,11 +41,11 @@ export const Auth: React.FC = () => {
   return (
     // Gradient from Mint #18A6A4 to slightly darker Teal
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#18A6A4] to-[#00897B] p-6">
-      
+
       <div className="flex flex-col items-center mb-8 animate-in fade-in slide-in-from-top duration-500">
-        <img 
-          src="https://i.ibb.co/5XGDxTY6/Kit-M-dico-Verde-Claro-M-dico-Logotipo-1000-x-1000-px-1-1.png" 
-          alt="GlucoAI Logo" 
+        <img
+          src="https://i.ibb.co/5XGDxTY6/Kit-M-dico-Verde-Claro-M-dico-Logotipo-1000-x-1000-px-1-1.png"
+          alt="Glicie Logo"
           className="w-48 sm:w-56 object-contain mb-1"
         />
         <p className="text-white text-lg font-medium text-center opacity-90 mt-2">
@@ -80,7 +80,7 @@ export const Auth: React.FC = () => {
               />
             </div>
           </div>
-          
+
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-400 uppercase ml-2 tracking-wide">Senha</label>
             <div className="relative">
@@ -119,7 +119,7 @@ export const Auth: React.FC = () => {
           >
             {loading ? <Loader2 className="animate-spin" size={24} /> : (
               <>
-                {isLogin ? 'Entrar' : 'Criar nova conta'} 
+                {isLogin ? 'Entrar' : 'Criar nova conta'}
                 <ArrowRight size={20} />
               </>
             )}
@@ -138,9 +138,9 @@ export const Auth: React.FC = () => {
           </button>
         </div>
       </div>
-      
+
       <p className="mt-8 text-white/70 text-xs text-center font-medium">
-        © 2025 GlucoAI. Saúde e tecnologia.
+        © 2025 Glicie. Saúde e tecnologia.
       </p>
     </div>
   );
